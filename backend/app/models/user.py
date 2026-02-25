@@ -20,4 +20,9 @@ class User(Base):
         nullable=True
     )
 
+    password = Column(
+        VARCHAR(255),
+        nullable=False
+    )
+
     
