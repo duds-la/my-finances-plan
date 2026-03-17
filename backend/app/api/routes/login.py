@@ -17,10 +17,10 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.name == data.name).first()
 
     if not user:
-        raise HTTPException(status_code=400, detail="Invalid credentials")
+        raise HTTPException(status_code=400, detail="Credenciais inválidas")
 
     if not verify_password(data.password, user.password):
-        raise HTTPException(status_code=400, detail="Invalid credentials")
+        raise HTTPException(status_code=400, detail="Credenciais inválidas")
 
     payload = {
         "sub": str(user.id),
