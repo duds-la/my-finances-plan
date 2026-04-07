@@ -4,32 +4,13 @@ from datetime import datetime, timedelta
 import jwt
 
 from app.database.session import get_db
-from app.models.user import User
-from app.schemas.auth import LoginRequest, TokenResponse
-from app.core.security import verify_password
+from app.models.transaction_type import Transaction_Type
+from app.schemas.transaction_type import Transaction_Type_Base, Transaction_Type_Create, Transaction_Type_Update, Transaction_Type_Response
 from app.core.config import settings
 
-router = APIRouter(prefix="/login", tags=["login"])
+router = APIRouter(prefix="/transaction_type", tags=["transaction_type"])
 
-@router.post("/", response_model=TokenResponse)
-def login(data: LoginRequest, db: Session = Depends(get_db)):
+@router.post("/create-transaction-type", response_model=Transaction_Type_Response)
+def login(data: Transaction_Type_Base, db: Session = Depends(get_db)):
 
-    user = db.query(User).filter(User.name == data.name).first()
-
-    if not user:
-        raise HTTPException(status_code=400, detail="Credenciais inválidas")
-
-    if not verify_password(data.password, user.password):
-        raise HTTPException(status_code=400, detail="Credenciais inválidas")
-
-    payload = {
-        "sub": str(user.id),
-        "exp": datetime.utcnow() + timedelta(hours=2)
-    }
-
-    token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
-
-    return {
-        "access_token": token,
-        "token_type": "bearer"
-    }
+    return True
