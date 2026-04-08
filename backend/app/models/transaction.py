@@ -45,5 +45,5 @@ class Transaction(Base):
     )
 
     user = relationship("User")
-    transaction_type = relationship("TransactionType")
-    transaction_category = relationship("TransactionCategory")
+    transaction_type = relationship("Transaction_Type")
+    transaction_category = relationship("Transaction_Category")
