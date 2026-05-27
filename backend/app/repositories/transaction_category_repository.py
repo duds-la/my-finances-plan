@@ -3,5 +3,5 @@ from app.repositories.base_repository import Base_Repository
 
 class Transaction_Category_Repository(Base_Repository[Transaction_Category]):
     
-    def __init__(self, model):
+    def __init__(self):
         super().__init__(Transaction_Category)

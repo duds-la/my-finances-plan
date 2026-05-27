@@ -5,7 +5,9 @@ class Transaction_Category_Schema_Base(BaseModel):
     description: str
 
 class Transaction_Category_Schema_Create(Transaction_Category_Schema_Base):
-    pass
+    acronym: str
+    description:Optional[str] = None
+
 
 class Transaction_Category_Schema_Update(Transaction_Category_Schema_Base):
     description:Optional[str] = None
