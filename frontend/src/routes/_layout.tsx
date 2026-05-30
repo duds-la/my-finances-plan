@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
+import { MobileBottomNav } from "@/components/Common/MobileBottomNav"
 
 import { Footer } from "@/components/Common/Footer"
 import AppSidebar from "@/components/Sidebar/AppSidebar"
@@ -35,6 +36,7 @@ function Layout() {
         </main>
         <Footer />
       </SidebarInset>
+      <MobileBottomNav />
     </SidebarProvider>
   )
 }
