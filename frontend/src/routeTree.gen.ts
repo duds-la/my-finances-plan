@@ -15,8 +15,12 @@ import { Route as RecoverPasswordRouteImport } from './routes/recover-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
+import { Route as LayoutTransacoesRouteImport } from './routes/_layout/transacoes'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
+import { Route as LayoutMetasRouteImport } from './routes/_layout/metas'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
+import { Route as LayoutInvestimentosRouteImport } from './routes/_layout/investimentos'
+import { Route as LayoutAnaliseRouteImport } from './routes/_layout/analise'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 
 const SignupRoute = SignupRouteImport.update({
@@ -48,14 +52,34 @@ const LayoutIndexRoute = LayoutIndexRouteImport.update({
   path: '/',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutTransacoesRoute = LayoutTransacoesRouteImport.update({
+  id: '/transacoes',
+  path: '/transacoes',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutMetasRoute = LayoutMetasRouteImport.update({
+  id: '/metas',
+  path: '/metas',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutItemsRoute = LayoutItemsRouteImport.update({
   id: '/items',
   path: '/items',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutInvestimentosRoute = LayoutInvestimentosRouteImport.update({
+  id: '/investimentos',
+  path: '/investimentos',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutAnaliseRoute = LayoutAnaliseRouteImport.update({
+  id: '/analise',
+  path: '/analise',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutAdminRoute = LayoutAdminRouteImport.update({
@@ -70,8 +94,12 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRoute
+  '/analise': typeof LayoutAnaliseRoute
+  '/investimentos': typeof LayoutInvestimentosRoute
   '/items': typeof LayoutItemsRoute
+  '/metas': typeof LayoutMetasRoute
   '/settings': typeof LayoutSettingsRoute
+  '/transacoes': typeof LayoutTransacoesRoute
   '/': typeof LayoutIndexRoute
 }
 export interface FileRoutesByTo {
@@ -80,8 +108,12 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRoute
+  '/analise': typeof LayoutAnaliseRoute
+  '/investimentos': typeof LayoutInvestimentosRoute
   '/items': typeof LayoutItemsRoute
+  '/metas': typeof LayoutMetasRoute
   '/settings': typeof LayoutSettingsRoute
+  '/transacoes': typeof LayoutTransacoesRoute
   '/': typeof LayoutIndexRoute
 }
 export interface FileRoutesById {
@@ -92,8 +124,12 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/_layout/admin': typeof LayoutAdminRoute
+  '/_layout/analise': typeof LayoutAnaliseRoute
+  '/_layout/investimentos': typeof LayoutInvestimentosRoute
   '/_layout/items': typeof LayoutItemsRoute
+  '/_layout/metas': typeof LayoutMetasRoute
   '/_layout/settings': typeof LayoutSettingsRoute
+  '/_layout/transacoes': typeof LayoutTransacoesRoute
   '/_layout/': typeof LayoutIndexRoute
 }
 export interface FileRouteTypes {
@@ -104,8 +140,12 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/admin'
+    | '/analise'
+    | '/investimentos'
     | '/items'
+    | '/metas'
     | '/settings'
+    | '/transacoes'
     | '/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -114,8 +154,12 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/admin'
+    | '/analise'
+    | '/investimentos'
     | '/items'
+    | '/metas'
     | '/settings'
+    | '/transacoes'
     | '/'
   id:
     | '__root__'
@@ -125,8 +169,12 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/_layout/admin'
+    | '/_layout/analise'
+    | '/_layout/investimentos'
     | '/_layout/items'
+    | '/_layout/metas'
     | '/_layout/settings'
+    | '/_layout/transacoes'
     | '/_layout/'
   fileRoutesById: FileRoutesById
 }
@@ -182,6 +230,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/transacoes': {
+      id: '/_layout/transacoes'
+      path: '/transacoes'
+      fullPath: '/transacoes'
+      preLoaderRoute: typeof LayoutTransacoesRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/settings': {
       id: '/_layout/settings'
       path: '/settings'
@@ -189,11 +244,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutSettingsRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/metas': {
+      id: '/_layout/metas'
+      path: '/metas'
+      fullPath: '/metas'
+      preLoaderRoute: typeof LayoutMetasRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/items': {
       id: '/_layout/items'
       path: '/items'
       fullPath: '/items'
       preLoaderRoute: typeof LayoutItemsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/investimentos': {
+      id: '/_layout/investimentos'
+      path: '/investimentos'
+      fullPath: '/investimentos'
+      preLoaderRoute: typeof LayoutInvestimentosRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/analise': {
+      id: '/_layout/analise'
+      path: '/analise'
+      fullPath: '/analise'
+      preLoaderRoute: typeof LayoutAnaliseRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/admin': {
@@ -208,15 +284,23 @@ declare module '@tanstack/react-router' {
 
 interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
+  LayoutAnaliseRoute: typeof LayoutAnaliseRoute
+  LayoutInvestimentosRoute: typeof LayoutInvestimentosRoute
   LayoutItemsRoute: typeof LayoutItemsRoute
+  LayoutMetasRoute: typeof LayoutMetasRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
+  LayoutTransacoesRoute: typeof LayoutTransacoesRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRoute,
+  LayoutAnaliseRoute: LayoutAnaliseRoute,
+  LayoutInvestimentosRoute: LayoutInvestimentosRoute,
   LayoutItemsRoute: LayoutItemsRoute,
+  LayoutMetasRoute: LayoutMetasRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
+  LayoutTransacoesRoute: LayoutTransacoesRoute,
   LayoutIndexRoute: LayoutIndexRoute,
 }
 

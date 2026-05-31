@@ -120,7 +120,7 @@ function SignUp() {
                     <Input
                       data-testid="email-input"
                       placeholder="user@example.com"
-                      type="email"
+                      type="text"
                       {...field}
                     />
                   </FormControl>
