@@ -24,11 +24,13 @@ from app.api.routes import (
     balance_projection_route,
     external_data_route,
     automation_rule_route,
+    user_route,
 )
 from app.core.config import settings
 
 api_router = APIRouter()
 api_router.include_router(login.router)
+api_router.include_router(user_route.router)
 api_router.include_router(transaction_type_route.router)
 api_router.include_router(transaction_category_route.router)
 api_router.include_router(transaction_route.router)

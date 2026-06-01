@@ -17,9 +17,11 @@ import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutTransacoesRouteImport } from './routes/_layout/transacoes'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
+import { Route as LayoutOrcamentoRouteImport } from './routes/_layout/orcamento'
 import { Route as LayoutMetasRouteImport } from './routes/_layout/metas'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutInvestimentosRouteImport } from './routes/_layout/investimentos'
+import { Route as LayoutConfiguracoesRouteImport } from './routes/_layout/configuracoes'
 import { Route as LayoutAnaliseRouteImport } from './routes/_layout/analise'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 
@@ -62,6 +64,11 @@ const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutOrcamentoRoute = LayoutOrcamentoRouteImport.update({
+  id: '/orcamento',
+  path: '/orcamento',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutMetasRoute = LayoutMetasRouteImport.update({
   id: '/metas',
   path: '/metas',
@@ -75,6 +82,11 @@ const LayoutItemsRoute = LayoutItemsRouteImport.update({
 const LayoutInvestimentosRoute = LayoutInvestimentosRouteImport.update({
   id: '/investimentos',
   path: '/investimentos',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutConfiguracoesRoute = LayoutConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutAnaliseRoute = LayoutAnaliseRouteImport.update({
@@ -95,9 +107,11 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRoute
   '/analise': typeof LayoutAnaliseRoute
+  '/configuracoes': typeof LayoutConfiguracoesRoute
   '/investimentos': typeof LayoutInvestimentosRoute
   '/items': typeof LayoutItemsRoute
   '/metas': typeof LayoutMetasRoute
+  '/orcamento': typeof LayoutOrcamentoRoute
   '/settings': typeof LayoutSettingsRoute
   '/transacoes': typeof LayoutTransacoesRoute
   '/': typeof LayoutIndexRoute
@@ -109,9 +123,11 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRoute
   '/analise': typeof LayoutAnaliseRoute
+  '/configuracoes': typeof LayoutConfiguracoesRoute
   '/investimentos': typeof LayoutInvestimentosRoute
   '/items': typeof LayoutItemsRoute
   '/metas': typeof LayoutMetasRoute
+  '/orcamento': typeof LayoutOrcamentoRoute
   '/settings': typeof LayoutSettingsRoute
   '/transacoes': typeof LayoutTransacoesRoute
   '/': typeof LayoutIndexRoute
@@ -125,9 +141,11 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_layout/admin': typeof LayoutAdminRoute
   '/_layout/analise': typeof LayoutAnaliseRoute
+  '/_layout/configuracoes': typeof LayoutConfiguracoesRoute
   '/_layout/investimentos': typeof LayoutInvestimentosRoute
   '/_layout/items': typeof LayoutItemsRoute
   '/_layout/metas': typeof LayoutMetasRoute
+  '/_layout/orcamento': typeof LayoutOrcamentoRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/transacoes': typeof LayoutTransacoesRoute
   '/_layout/': typeof LayoutIndexRoute
@@ -141,9 +159,11 @@ export interface FileRouteTypes {
     | '/signup'
     | '/admin'
     | '/analise'
+    | '/configuracoes'
     | '/investimentos'
     | '/items'
     | '/metas'
+    | '/orcamento'
     | '/settings'
     | '/transacoes'
     | '/'
@@ -155,9 +175,11 @@ export interface FileRouteTypes {
     | '/signup'
     | '/admin'
     | '/analise'
+    | '/configuracoes'
     | '/investimentos'
     | '/items'
     | '/metas'
+    | '/orcamento'
     | '/settings'
     | '/transacoes'
     | '/'
@@ -170,9 +192,11 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_layout/admin'
     | '/_layout/analise'
+    | '/_layout/configuracoes'
     | '/_layout/investimentos'
     | '/_layout/items'
     | '/_layout/metas'
+    | '/_layout/orcamento'
     | '/_layout/settings'
     | '/_layout/transacoes'
     | '/_layout/'
@@ -244,6 +268,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutSettingsRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/orcamento': {
+      id: '/_layout/orcamento'
+      path: '/orcamento'
+      fullPath: '/orcamento'
+      preLoaderRoute: typeof LayoutOrcamentoRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/metas': {
       id: '/_layout/metas'
       path: '/metas'
@@ -263,6 +294,13 @@ declare module '@tanstack/react-router' {
       path: '/investimentos'
       fullPath: '/investimentos'
       preLoaderRoute: typeof LayoutInvestimentosRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/configuracoes': {
+      id: '/_layout/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof LayoutConfiguracoesRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/analise': {
@@ -285,9 +323,11 @@ declare module '@tanstack/react-router' {
 interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
   LayoutAnaliseRoute: typeof LayoutAnaliseRoute
+  LayoutConfiguracoesRoute: typeof LayoutConfiguracoesRoute
   LayoutInvestimentosRoute: typeof LayoutInvestimentosRoute
   LayoutItemsRoute: typeof LayoutItemsRoute
   LayoutMetasRoute: typeof LayoutMetasRoute
+  LayoutOrcamentoRoute: typeof LayoutOrcamentoRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutTransacoesRoute: typeof LayoutTransacoesRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
@@ -296,9 +336,11 @@ interface LayoutRouteChildren {
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRoute,
   LayoutAnaliseRoute: LayoutAnaliseRoute,
+  LayoutConfiguracoesRoute: LayoutConfiguracoesRoute,
   LayoutInvestimentosRoute: LayoutInvestimentosRoute,
   LayoutItemsRoute: LayoutItemsRoute,
   LayoutMetasRoute: LayoutMetasRoute,
+  LayoutOrcamentoRoute: LayoutOrcamentoRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutTransacoesRoute: LayoutTransacoesRoute,
   LayoutIndexRoute: LayoutIndexRoute,

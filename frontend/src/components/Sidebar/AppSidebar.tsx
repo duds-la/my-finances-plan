@@ -11,6 +11,7 @@ import {
   Zap,
   Trophy,
   Bot,
+  SlidersHorizontal,
 } from "lucide-react"
 import {
   Sidebar,
@@ -49,6 +50,7 @@ const coreItems = [
   { icon: LayoutDashboard, title: "Dashboard", path: "/" },
   { icon: ArrowLeftRight, title: "Transações", path: "/transacoes" },
   { icon: Wallet, title: "Orçamento", path: "/orcamento" },
+  { icon: SlidersHorizontal, title: "Configurações", path: "/configuracoes" },
 ]
 
 const investItems = [

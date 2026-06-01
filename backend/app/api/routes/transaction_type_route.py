@@ -13,13 +13,16 @@ from app.repositories.transaction_type_repository import Transaction_Type_Reposi
 router = APIRouter(prefix="/transaction_type", tags=["transaction_type"])
 repository = Transaction_Type_Repository()
 
+
 @router.post("/", response_model=Transaction_Type_Response, status_code=status.HTTP_201_CREATED)
 def create(data: Transaction_Type_Create, db: Session = Depends(get_db)):
     return repository.create(db, data.model_dump())
 
+
 @router.get("/", response_model=List[Transaction_Type_Response])
 def get_all(db: Session = Depends(get_db)):
     return repository.get_all(db)
+
 
 @router.get("/{id}", response_model=Transaction_Type_Response)
 def get_by_id(id: int, db: Session = Depends(get_db)):
@@ -28,33 +31,41 @@ def get_by_id(id: int, db: Session = Depends(get_db)):
     if not obj:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Transaction Type whith code: {id} not found!"
+            detail=f"Transaction Type with id {id} not found"
         )
-    
+
     return obj
 
+
 @router.patch("/{id}", response_model=Transaction_Type_Response)
-def update(id:int, data: Transaction_Type_Update, db: Session = Depends(get_db)):
+def update(id: int, data: Transaction_Type_Update, db: Session = Depends(get_db)):
     obj = repository.get_by_id(db, id)
 
     if not obj:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Transaction Type whith code: {id} not found!"
+            detail=f"Transaction Type with id {id} not found"
         )
-    
+
     update_data = data.model_dump(exclude_unset=True)
 
-    return repository.get_by_id(db, id)
+    for field, value in update_data.items():
+        setattr(obj, field, value)
+
+    db.commit()
+    db.refresh(obj)
+
+    return obj
+
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete(id: int, db: Session = Depends(get_db)):
     obj = repository.get_by_id(db, id)
- 
+
     if not obj:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Transaction type with id {id} not found"
+            detail=f"Transaction Type with id {id} not found"
         )
- 
+
     repository.delete(db, obj)
