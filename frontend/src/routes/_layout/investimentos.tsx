@@ -387,18 +387,19 @@ function PosicaoCard({ inv, events, color }: {
   const [expanded, setExpanded]       = useState(false)
   const [eventoModal, setEventoModal] = useState(false)
   const deleteMut = useDeleteIncome()
-
+ 
   const statusColors: Record<string, string> = {
     ativo:     "text-emerald-500 bg-emerald-500/10",
     vencido:   "text-amber-500 bg-amber-500/10",
     resgatado: "text-muted-foreground bg-muted",
   }
-
+ 
   const currentValue  = inv.currentValue
-  const rentabilidade = Number(inv.invested_value) > 0
-    ? ((currentValue - Number(inv.invested_value)) / Number(inv.invested_value)) * 100
+  // Usa totalInvested (base de custo real = aporte inicial + aportes adicionais)
+  const rentabilidade = inv.totalInvested > 0
+    ? ((currentValue - inv.totalInvested) / inv.totalInvested) * 100
     : 0
-
+ 
   return (
     <>
       <div className="rounded-xl border border-border bg-card overflow-hidden hover:border-primary/30 transition-colors">
@@ -421,16 +422,17 @@ function PosicaoCard({ inv, events, color }: {
               {inv.status}
             </span>
           </div>
-
+ 
           {/* KPIs do card */}
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div>
               <p className="text-muted-foreground">Aportado</p>
-              <p className="font-semibold mt-0.5">{fmtBRL(Number(inv.invested_value))}</p>
+              {/* totalInvested reflete o aporte inicial + aportes adicionais */}
+              <p className="font-semibold mt-0.5">{fmtBRL(inv.totalInvested)}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Valor Atual</p>
-              <p className={cn("font-semibold mt-0.5", currentValue >= Number(inv.invested_value) ? "text-emerald-500" : "text-rose-400")}>
+              <p className={cn("font-semibold mt-0.5", currentValue >= inv.totalInvested ? "text-emerald-500" : "text-rose-400")}>
                 {fmtBRL(currentValue)}
               </p>
             </div>
@@ -448,7 +450,7 @@ function PosicaoCard({ inv, events, color }: {
             )}
           </div>
         </div>
-
+ 
         {/* Ações do card */}
         <div className="flex items-center gap-1 px-4 pb-3">
           <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs flex-1"
@@ -460,7 +462,7 @@ function PosicaoCard({ inv, events, color }: {
             {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
           </button>
         </div>
-
+ 
         {/* Histórico de eventos expandível */}
         {expanded && (
           <div className="border-t border-border divide-y divide-border">
@@ -502,7 +504,7 @@ function PosicaoCard({ inv, events, color }: {
           </div>
         )}
       </div>
-
+ 
       {eventoModal && <NovoEventoModal investment={inv} onClose={() => setEventoModal(false)} />}
     </>
   )

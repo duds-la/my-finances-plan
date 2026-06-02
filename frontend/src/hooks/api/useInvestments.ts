@@ -33,6 +33,11 @@ export interface Income {
   ir_withheld: number
 }
 
+export interface IncomeType {
+  id: number
+  description: string
+}
+
 export interface InvestmentCreate {
   investment_type_id: number
   transaction_id?: number
@@ -56,55 +61,77 @@ export interface InvestmentEnriched extends Investment {
   typeAcronym: string
   isFixedIncome: boolean
   totalIncome: number
-  // valor atual = invested_value + totalIncome (resgates negativos já reduzem)
-  currentValue: number
+  totalInvested: number  // invested_value + aportes adicionais (base de custo real)
+  currentValue: number   // totalInvested + totalIncome
 }
 
 // ── Query keys ────────────────────────────────────────────────────────────────
 
 export const invKeys = {
-  all:     ["investments"] as const,
-  types:   ["investment_types"] as const,
-  incomes: ["incomes"] as const,
+  all:         ["investments"]    as const,
+  types:       ["investment_types"] as const,
+  incomes:     ["incomes"]        as const,
+  incomeTypes: ["income_types"]   as const,
 }
 
 // ── Fetchers ──────────────────────────────────────────────────────────────────
 
-const fetchInvestments  = async (): Promise<Investment[]>     => (await api.get(`${BASE}/investment/`)).data
+const fetchInvestments     = async (): Promise<Investment[]>     => (await api.get(`${BASE}/investment/`)).data
 const fetchInvestmentTypes = async (): Promise<InvestmentType[]> => (await api.get(`${BASE}/investment_type/`)).data
-const fetchIncomes      = async (): Promise<Income[]>         => (await api.get(`${BASE}/income/`)).data
+const fetchIncomes         = async (): Promise<Income[]>         => (await api.get(`${BASE}/income/`)).data
+const fetchIncomeTypes     = async (): Promise<IncomeType[]>     => (await api.get(`${BASE}/income_type/`)).data
 
 // ── Main hook ─────────────────────────────────────────────────────────────────
 
 export function useInvestments() {
-  const { data: investments = [], isLoading: loadingInv }    = useQuery({ queryKey: invKeys.all,     queryFn: fetchInvestments })
-  const { data: types = [],       isLoading: loadingTypes }  = useQuery({ queryKey: invKeys.types,   queryFn: fetchInvestmentTypes })
-  const { data: incomes = [],     isLoading: loadingIncomes } = useQuery({ queryKey: invKeys.incomes, queryFn: fetchIncomes })
+  const { data: investments = [],  isLoading: loadingInv }        = useQuery({ queryKey: invKeys.all,         queryFn: fetchInvestments })
+  const { data: types = [],        isLoading: loadingTypes }       = useQuery({ queryKey: invKeys.types,       queryFn: fetchInvestmentTypes })
+  const { data: incomes = [],      isLoading: loadingIncomes }     = useQuery({ queryKey: invKeys.incomes,     queryFn: fetchIncomes })
+  const { data: incomeTypes = [],  isLoading: loadingIncomeTypes } = useQuery({ queryKey: invKeys.incomeTypes, queryFn: fetchIncomeTypes })
 
   const typeMap = Object.fromEntries(types.map(t => [t.id, t]))
 
-  // Agrupa todos os eventos (rendimentos + resgates) por investment_id
-  const incomeByInv: Record<number, number> = {}
-  const eventsByInv: Record<number, Income[]> = {}
+  // IDs cujo tipo de rendimento representa "aporte adicional"
+  // Aportes aumentam a base de custo e NÃO devem entrar no cálculo de lucro
+  const aporteTypeIds = new Set(
+    incomeTypes
+      .filter(t => t.description.toLowerCase().includes("aporte"))
+      .map(t => t.id)
+  )
+
+  // Separa aportes adicionais (base de custo) de rendimentos/resgates (lucro real)
+  const incomeByInv:  Record<number, number>   = {}  // rendimentos + resgates
+  const aporteByInv:  Record<number, number>   = {}  // aportes adicionais
+  const eventsByInv:  Record<number, Income[]> = {}
+
   for (const inc of incomes) {
-    incomeByInv[inc.investment_id]  = (incomeByInv[inc.investment_id]  ?? 0) + Number(inc.income_value)
-    eventsByInv[inc.investment_id]  = [...(eventsByInv[inc.investment_id] ?? []), inc]
+    eventsByInv[inc.investment_id] = [...(eventsByInv[inc.investment_id] ?? []), inc]
+
+    if (aporteTypeIds.has(inc.income_type_id)) {
+      aporteByInv[inc.investment_id] = (aporteByInv[inc.investment_id] ?? 0) + Number(inc.income_value)
+    } else {
+      incomeByInv[inc.investment_id] = (incomeByInv[inc.investment_id] ?? 0) + Number(inc.income_value)
+    }
   }
 
   const enriched: InvestmentEnriched[] = investments.map(inv => {
-    const type        = typeMap[inv.investment_type_id]
-    const totalIncome = incomeByInv[inv.id] ?? 0
+    const type          = typeMap[inv.investment_type_id]
+    const totalIncome   = incomeByInv[inv.id] ?? 0
+    const totalAporte   = aporteByInv[inv.id] ?? 0
+    const totalInvested = Number(inv.invested_value) + totalAporte  // base de custo real
+
     return {
       ...inv,
-      typeName:     type?.description ?? "—",
-      typeAcronym:  type?.acronym     ?? "?",
+      typeName:      type?.description ?? "—",
+      typeAcronym:   type?.acronym     ?? "?",
       isFixedIncome: type?.fixed_income ?? false,
       totalIncome,
-      currentValue: Number(inv.invested_value) + totalIncome,
+      totalInvested,
+      currentValue:  totalInvested + totalIncome,
     }
   })
 
-  const totalInvestido   = enriched.reduce((s, i) => s + Number(i.invested_value), 0)
+  const totalInvestido   = enriched.reduce((s, i) => s + i.totalInvested, 0)
   const totalRendimentos = enriched.reduce((s, i) => s + i.totalIncome, 0)
 
   const composicaoPorTipo = types
@@ -122,7 +149,7 @@ export function useInvestments() {
     totalInvestido,
     totalRendimentos,
     composicaoPorTipo,
-    isLoading: loadingInv || loadingTypes || loadingIncomes,
+    isLoading: loadingInv || loadingTypes || loadingIncomes || loadingIncomeTypes,
   }
 }
 

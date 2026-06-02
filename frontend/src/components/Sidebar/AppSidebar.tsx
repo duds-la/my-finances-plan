@@ -28,6 +28,7 @@ import {
 import useAuth from "@/hooks/useAuth"
 import { SidebarAppearance } from "@/components/Common/Appearance"
 import { User } from "./User"
+import { Archive } from "lucide-react"
 
 // Logo component
 function FinanceLogo({ collapsed }: { collapsed?: boolean }) {
@@ -51,6 +52,7 @@ const coreItems = [
   { icon: ArrowLeftRight, title: "Transações", path: "/transacoes" },
   { icon: Wallet, title: "Orçamento", path: "/orcamento" },
   { icon: SlidersHorizontal, title: "Configurações", path: "/configuracoes" },
+  { icon: Archive, title: "Caixinhas", path: "/caixinhas" },
 ]
 
 const investItems = [
