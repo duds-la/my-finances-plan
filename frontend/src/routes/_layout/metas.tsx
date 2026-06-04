@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { Plus, CheckCircle2, Clock } from "lucide-react"
+import { useState } from "react"
+import { Plus, CheckCircle2, Clock, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import { useGoals } from "@/hooks/api/useGoals"
+import { useGoals, useCreateGoal } from "@/hooks/api/useGoals"
 
 export const Route = createFileRoute("/_layout/metas")({
   component: MetasPage,
@@ -13,8 +15,130 @@ const COLORS = ["#4ade80", "#22d3ee", "#a78bfa", "#fbbf24", "#f87171"]
 const fmtBRL = (v: number) =>
   Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })
 
+// ── Modal de nova meta ────────────────────────────────────────────────────────
+
+function NovaMetaModal({ onClose }: { onClose: () => void }) {
+  const createMut = useCreateGoal()
+
+  const [form, setForm] = useState({
+    title: "",
+    target_value: "",
+    current_value: "",
+    deadline: "",
+    suggested_contribution: "",
+  })
+
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((prev) => ({ ...prev, [k]: e.target.value }))
+
+  const handleSubmit = () => {
+    const target = parseFloat(form.target_value.replace(",", "."))
+    if (!form.title.trim() || !target) return
+
+    createMut.mutate(
+      {
+        title: form.title.trim(),
+        target_value: target,
+        current_value: form.current_value
+          ? parseFloat(form.current_value.replace(",", "."))
+          : 0,
+        deadline: form.deadline || undefined,
+        suggested_contribution: form.suggested_contribution
+          ? parseFloat(form.suggested_contribution.replace(",", "."))
+          : undefined,
+        status: "em_andamento",
+      },
+      { onSuccess: onClose }
+    )
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center">
+      <div className="w-full max-w-md rounded-t-2xl border border-border bg-card p-5 sm:rounded-2xl">
+        {/* Header */}
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-base font-semibold">Nova Meta</h2>
+          <button onClick={onClose} className="rounded-lg p-1 text-muted-foreground hover:bg-muted">
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Campos */}
+        <div className="space-y-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Título *</label>
+            <Input
+              placeholder="Ex: Reserva de emergência"
+              value={form.title}
+              onChange={set("title")}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Valor alvo (R$) *</label>
+              <Input
+                type="number"
+                placeholder="10000"
+                value={form.target_value}
+                onChange={set("target_value")}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Já tenho (R$)</label>
+              <Input
+                type="number"
+                placeholder="0"
+                value={form.current_value}
+                onChange={set("current_value")}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Prazo</label>
+              <Input
+                type="date"
+                value={form.deadline}
+                onChange={set("deadline")}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">Aporte mensal (R$)</label>
+              <Input
+                type="number"
+                placeholder="500"
+                value={form.suggested_contribution}
+                onChange={set("suggested_contribution")}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Ações */}
+        <div className="mt-5 flex gap-2">
+          <Button variant="outline" className="flex-1" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            className="flex-1"
+            onClick={handleSubmit}
+            disabled={createMut.isPending || !form.title.trim() || !form.target_value}
+          >
+            {createMut.isPending ? <Loader2 size={14} className="animate-spin" /> : "Criar Meta"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
 function MetasPage() {
   const { goals, ativas, concluidas, totalAlvo, totalAtual, progressoGeral, isLoading } = useGoals()
+  const [modalOpen, setModalOpen] = useState(false)
 
   if (isLoading) {
     return (
@@ -30,12 +154,15 @@ function MetasPage() {
 
   return (
     <div className="space-y-4 p-4 pb-24 sm:space-y-5 sm:p-6 sm:pb-6">
+      {/* Modal */}
+      {modalOpen && <NovaMetaModal onClose={() => setModalOpen(false)} />}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold tracking-tight sm:text-xl">Metas Financeiras</h1>
           <p className="text-xs text-muted-foreground sm:text-sm">{ativas.length} ativas · {concluidas.length} concluída(s)</p>
         </div>
-        <Button size="sm" className="gap-1.5">
+        <Button size="sm" className="gap-1.5" onClick={() => setModalOpen(true)}>
           <Plus size={14} /> Nova Meta
         </Button>
       </div>
@@ -64,7 +191,9 @@ function MetasPage() {
       {ativas.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-12 text-center">
           <p className="text-sm text-muted-foreground">Você não tem metas ativas ainda.</p>
-          <Button size="sm" variant="outline" className="gap-1.5"><Plus size={14} /> Criar primeira meta</Button>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setModalOpen(true)}>
+            <Plus size={14} /> Criar primeira meta
+          </Button>
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
