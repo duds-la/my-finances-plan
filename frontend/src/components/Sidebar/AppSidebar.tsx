@@ -12,6 +12,7 @@ import {
   Trophy,
   Bot,
   SlidersHorizontal,
+  CreditCard 
 } from "lucide-react"
 import {
   Sidebar,
@@ -64,6 +65,7 @@ const planItems = [
   { icon: Target, title: "Metas", path: "/metas" },
   { icon: Zap, title: "Simulações", path: "/simulacoes" },
   { icon: Trophy, title: "Conquistas", path: "/conquistas" },
+  { icon: CreditCard, title: "Parcelamentos", path: "/parcelamentos" }
 ]
 
 const intelItems = [

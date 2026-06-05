@@ -28,6 +28,8 @@ class Budget_Schema_Update(BaseModel):
 class Budget_Schema_Response(Budget_Schema_Base):
     id: int
     user_id: int
+    committed_value: float = 0.0       # parcelas pendentes que vencem neste mês
+    effective_remaining: float = 0.0   # limit - spent - committed
 
     class Config:
         from_attributes = True

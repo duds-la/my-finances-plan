@@ -18,6 +18,7 @@ from app.api.routes import (
     simulation_route,
     achievement_route,
     user_achievement_route,
+    installment_route,
     # Módulo 4 — Análise & Inteligência
     financial_score_route,
     anomaly_route,
@@ -52,6 +53,7 @@ api_router.include_router(simulation_route.router)
 api_router.include_router(achievement_route.router)
 api_router.include_router(user_achievement_route.router)
 api_router.include_router(category_reserve_route.router)
+api_router.include_router(installment_route.router)   # ← NOVO
 
 # Módulo 4 — Análise & Inteligência
 api_router.include_router(financial_score_route.router)

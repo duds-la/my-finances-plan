@@ -19,6 +19,7 @@ import { Route as LayoutTransacoesRouteImport } from './routes/_layout/transacoe
 import { Route as LayoutSimulacoesRouteImport } from './routes/_layout/simulacoes'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutPortfolioRouteImport } from './routes/_layout/portfolio'
+import { Route as LayoutParcelamentosRouteImport } from './routes/_layout/parcelamentos'
 import { Route as LayoutOrcamentoRouteImport } from './routes/_layout/orcamento'
 import { Route as LayoutMetasRouteImport } from './routes/_layout/metas'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
@@ -76,6 +77,11 @@ const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
 const LayoutPortfolioRoute = LayoutPortfolioRouteImport.update({
   id: '/portfolio',
   path: '/portfolio',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutParcelamentosRoute = LayoutParcelamentosRouteImport.update({
+  id: '/parcelamentos',
+  path: '/parcelamentos',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutOrcamentoRoute = LayoutOrcamentoRouteImport.update({
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/items': typeof LayoutItemsRoute
   '/metas': typeof LayoutMetasRoute
   '/orcamento': typeof LayoutOrcamentoRoute
+  '/parcelamentos': typeof LayoutParcelamentosRoute
   '/portfolio': typeof LayoutPortfolioRoute
   '/settings': typeof LayoutSettingsRoute
   '/simulacoes': typeof LayoutSimulacoesRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/items': typeof LayoutItemsRoute
   '/metas': typeof LayoutMetasRoute
   '/orcamento': typeof LayoutOrcamentoRoute
+  '/parcelamentos': typeof LayoutParcelamentosRoute
   '/portfolio': typeof LayoutPortfolioRoute
   '/settings': typeof LayoutSettingsRoute
   '/simulacoes': typeof LayoutSimulacoesRoute
@@ -180,6 +188,7 @@ export interface FileRoutesById {
   '/_layout/items': typeof LayoutItemsRoute
   '/_layout/metas': typeof LayoutMetasRoute
   '/_layout/orcamento': typeof LayoutOrcamentoRoute
+  '/_layout/parcelamentos': typeof LayoutParcelamentosRoute
   '/_layout/portfolio': typeof LayoutPortfolioRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/simulacoes': typeof LayoutSimulacoesRoute
@@ -202,6 +211,7 @@ export interface FileRouteTypes {
     | '/items'
     | '/metas'
     | '/orcamento'
+    | '/parcelamentos'
     | '/portfolio'
     | '/settings'
     | '/simulacoes'
@@ -222,6 +232,7 @@ export interface FileRouteTypes {
     | '/items'
     | '/metas'
     | '/orcamento'
+    | '/parcelamentos'
     | '/portfolio'
     | '/settings'
     | '/simulacoes'
@@ -243,6 +254,7 @@ export interface FileRouteTypes {
     | '/_layout/items'
     | '/_layout/metas'
     | '/_layout/orcamento'
+    | '/_layout/parcelamentos'
     | '/_layout/portfolio'
     | '/_layout/settings'
     | '/_layout/simulacoes'
@@ -330,6 +342,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutPortfolioRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/parcelamentos': {
+      id: '/_layout/parcelamentos'
+      path: '/parcelamentos'
+      fullPath: '/parcelamentos'
+      preLoaderRoute: typeof LayoutParcelamentosRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/orcamento': {
       id: '/_layout/orcamento'
       path: '/orcamento'
@@ -406,6 +425,7 @@ interface LayoutRouteChildren {
   LayoutItemsRoute: typeof LayoutItemsRoute
   LayoutMetasRoute: typeof LayoutMetasRoute
   LayoutOrcamentoRoute: typeof LayoutOrcamentoRoute
+  LayoutParcelamentosRoute: typeof LayoutParcelamentosRoute
   LayoutPortfolioRoute: typeof LayoutPortfolioRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutSimulacoesRoute: typeof LayoutSimulacoesRoute
@@ -423,6 +443,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutItemsRoute: LayoutItemsRoute,
   LayoutMetasRoute: LayoutMetasRoute,
   LayoutOrcamentoRoute: LayoutOrcamentoRoute,
+  LayoutParcelamentosRoute: LayoutParcelamentosRoute,
   LayoutPortfolioRoute: LayoutPortfolioRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutSimulacoesRoute: LayoutSimulacoesRoute,
