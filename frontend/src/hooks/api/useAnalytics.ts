@@ -2,27 +2,11 @@
  * useAnalytics.ts
  *
  * Endpoints consumidos:
- *   GET  /api/v1/financial_score/          → histórico de scores do usuário
- *   GET  /api/v1/financial_score/filter?month=&year=  → score de mês/ano específico
- *   GET  /api/v1/anomaly/                  → anomalias detectadas
- *   GET  /api/v1/balance_projection/       → projeções de saldo
- *
- * Schemas relevantes:
- *   Financial_Score_Schema_Response (model financial_score.py):
- *     id, user_id, month (int), year (int), score (Decimal 5,2),
- *     expense_income_ratio (Decimal 5,4 | null),
- *     emergency_reserve (Decimal 10,2 | null),
- *     components (JSON | null),
- *     calculated_at (datetime)
- *
- *   ANOMALIA (DER):
- *     id, user_id, transacao_id, categoria_id,
- *     valor_esperado, valor_real, desvio_percentual,
- *     status, detectada_em
- *
- *   PROJECAO_SALDO (DER):
- *     id, user_id, periodo_dias, saldo_atual, saldo_projetado,
- *     entradas_previstas (JSON), saidas_previstas (JSON), gerado_em
+ *   GET  /api/v1/financial_score/                        → histórico de scores
+ *   GET  /api/v1/financial_score/filter?month=&year=     → score de mês específico
+ *   GET  /api/v1/anomaly/                                → anomalias detectadas
+ *   GET  /api/v1/balance_projection/                     → projeções de saldo
+ *   GET  /api/v1/analytics/dashboard/{year}/{month}      → snapshot completo de indicadores
  */
 import { useQuery } from "@tanstack/react-query"
 import { api, BASE } from "@/lib/api"
@@ -64,13 +48,62 @@ export interface BalanceProjection {
   generated_at: string
 }
 
+export interface DashboardData {
+  // Indicadores calculados pelo backend
+  indicators: {
+    score_geral: number
+    expense_income_ratio: number
+    savings_rate: number
+    burn_rate_trend: number
+    category_concentration: number
+    investment_rate: number
+    emergency_months: number
+    goal_coverage: number
+    anomaly_count: number
+    monthly_volatility: number
+  }
+  // Totais do mês
+  receitas: number
+  despesas: number
+  investimentos: number
+  saldo: number
+  // Gráficos
+  cat_spending: Record<string, number>
+  cat_hist_media: Record<string, number>
+  saldos_historico: number[]
+  anomalias: Array<{
+    category_id: number
+    expected_value: number
+    actual_value: number
+    deviation_percentage: number
+    status: string
+  }>
+  projecoes: Array<{
+    period_days: number
+    current_balance: number
+    projected_balance: number
+    expected_inflows: Array<{ label: string; value: number }>
+    expected_outflows: Array<{ label: string; value: number }>
+  }>
+  score_history: Array<{
+    month: number
+    year: number
+    score: number
+    components?: Record<string, number>
+    calculated_at: string
+  }>
+  mes: number
+  ano: number
+}
+
 // ── Query keys ────────────────────────────────────────────────────────────────
 
 export const analyticsKeys = {
-  scores: ["financial_scores"] as const,
+  scores:       ["financial_scores"] as const,
   scoreByMonth: (month: number, year: number) => ["financial_score", month, year] as const,
-  anomalies: ["anomalies"] as const,
-  projections: ["balance_projections"] as const,
+  anomalies:    ["anomalies"] as const,
+  projections:  ["balance_projections"] as const,
+  dashboard:    (year: number, month: number) => ["analytics_dashboard", year, month] as const,
 }
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
@@ -86,9 +119,9 @@ export function useFinancialScores() {
 }
 
 export function useCurrentMonthScore() {
-  const now = new Date()
+  const now   = new Date()
   const month = now.getMonth() + 1
-  const year = now.getFullYear()
+  const year  = now.getFullYear()
 
   return useQuery({
     queryKey: analyticsKeys.scoreByMonth(month, year),
@@ -99,7 +132,6 @@ export function useCurrentMonthScore() {
         )
         return data
       } catch {
-        // 404 = score ainda não calculado para o mês
         return null
       }
     },
@@ -126,15 +158,28 @@ export function useBalanceProjection() {
   })
 }
 
+export function useAnalyticsDashboard(year?: number, month?: number) {
+  const now = new Date()
+  const y   = year  ?? now.getFullYear()
+  const m   = month ?? now.getMonth() + 1
+
+  return useQuery({
+    queryKey: analyticsKeys.dashboard(y, m),
+    queryFn: async (): Promise<DashboardData> => {
+      const { data } = await api.get(`${BASE}/analytics/dashboard/${y}/${m}`)
+      return data
+    },
+  })
+}
+
 // ── Composite hook para a página de Análise ───────────────────────────────────
 
 export function useAnalyticsPage() {
-  const { data: scores = [], isLoading: loadingScores } = useFinancialScores()
-  const { data: currentScore, isLoading: loadingCurrent } = useCurrentMonthScore()
+  const { data: scores = [], isLoading: loadingScores }       = useFinancialScores()
+  const { data: currentScore, isLoading: loadingCurrent }     = useCurrentMonthScore()
   const { data: anomalies = [], isLoading: loadingAnomalies } = useAnomalies()
   const { data: projections = [], isLoading: loadingProjections } = useBalanceProjection()
 
-  // Histórico dos últimos 6 meses para o gráfico de linha
   const scoreHistorico = [...scores]
     .sort((a, b) => {
       if (a.year !== b.year) return a.year - b.year
@@ -146,22 +191,20 @@ export function useAnalyticsPage() {
       score: Number(s.score),
     }))
 
-  // Componentes do score para barras de progresso
   const componentesScore: Array<{ label: string; pct: number; cor: string }> = []
   if (currentScore?.components) {
     const colors = ["#4ade80", "#22d3ee", "#a78bfa", "#fbbf24", "#f87171"]
     Object.entries(currentScore.components).forEach(([key, val], i) => {
       componentesScore.push({
         label: key.replace(/_/g, " "),
-        pct: Math.min(100, Math.round(Number(val))),
-        cor: colors[i % colors.length],
+        pct:   Math.min(100, Math.round(Number(val))),
+        cor:   colors[i % colors.length],
       })
     })
   }
 
   const scoreAtual = currentScore ? Number(currentScore.score) : null
 
-  // Projeção mais recente
   const projecaoAtual = projections.length > 0
     ? projections.sort(
         (a, b) => new Date(b.generated_at).getTime() - new Date(a.generated_at).getTime(),

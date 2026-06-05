@@ -7,50 +7,18 @@ from app.database.base import Base
 class Financial_Goal(Base):
     __tablename__ = "financial_goal"
 
-    id = Column(
-        Integer,
-        primary_key=True,
-        autoincrement=True,
-        nullable=False,
-        index=True
-    )
+    id      = Column(Integer, primary_key=True, autoincrement=True, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
 
-    user_id = Column(
-        Integer,
-        ForeignKey("user.id"),
-        nullable=False
-    )
+    title          = Column(VARCHAR(120),   nullable=False)
+    target_value   = Column(NUMERIC(10, 2), nullable=False)
+    current_value  = Column(NUMERIC(10, 2), nullable=False, default=0)
+    deadline       = Column(Date,           nullable=True)
+    status         = Column(VARCHAR(30),    nullable=False, default="em_andamento")
+    suggested_contribution = Column(NUMERIC(10, 2), nullable=True)
 
-    title = Column(
-        VARCHAR(120),
-        nullable=False
-    )
+    # Liga a meta a um investimento específico
+    investment_id  = Column(Integer, ForeignKey("investment.id", ondelete="SET NULL"), nullable=True)
 
-    target_value = Column(
-        NUMERIC(10, 2),
-        nullable=False
-    )
-
-    current_value = Column(
-        NUMERIC(10, 2),
-        nullable=False,
-        default=0
-    )
-
-    deadline = Column(
-        Date,
-        nullable=True
-    )
-
-    status = Column(
-        VARCHAR(30),
-        nullable=False,
-        default="em_andamento"
-    )
-
-    suggested_contribution = Column(
-        NUMERIC(10, 2),
-        nullable=True
-    )
-
-    user = relationship("User")
+    user       = relationship("User")
+    investment = relationship("Investment", foreign_keys=[investment_id])

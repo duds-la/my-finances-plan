@@ -1,27 +1,36 @@
 /**
  * useDashboard.ts
- *
- * Agrega dados dos quatro módulos para compor o Dashboard principal.
- * Não faz requisições extras — reutiliza os hooks existentes.
- *
- * Dados entregues:
- *   - KPIs: saldo, receitas, despesas, total investido
- *   - Gráfico patrimônio: combina saldo + investimentos ao longo do tempo
- *     (usa transações agrupadas por mês)
- *   - Gráfico fluxo de caixa: receitas vs despesas por mês (últimos 6)
- *   - Gastos por categoria: top categorias do mês corrente
- *   - Score: do mês atual (via useCurrentMonthScore)
- *   - Últimas transações: 5 mais recentes
- *   - Metas ativas: progresso
  */
 import { useMemo } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { useTransactions } from "./useTransactions"
 import { useInvestments } from "./useInvestments"
 import { useGoals } from "./useGoals"
 import { useCurrentMonthScore, useAnomalies } from "./useAnalytics"
+import { api, BASE } from "@/lib/api"
 
 const MONTH_NAMES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
                      "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+
+// ── Hook para total das caixinhas ─────────────────────────────────────────────
+
+function useTotalReservado() {
+  const now = new Date()
+  const month = now.getMonth() + 1
+  const year  = now.getFullYear()
+
+  return useQuery<number>({
+    queryKey: ["category_reserves", "summary", month, year, "total"],
+    queryFn: async () => {
+      const { data } = await api.get(
+        `${BASE}/category_reserve/summary?month=${month}&year=${year}`
+      )
+      return data.total_reserved ?? 0
+    },
+  })
+}
+
+// ── Hook principal ────────────────────────────────────────────────────────────
 
 export function useDashboard() {
   const { transactions, recentes, totalReceitas, totalDespesas, isLoading: loadTx } = useTransactions()
@@ -29,10 +38,11 @@ export function useDashboard() {
   const { ativas: metasAtivas, isLoading: loadGoals } = useGoals()
   const { data: currentScore, isLoading: loadScore } = useCurrentMonthScore()
   const { data: anomalies = [], isLoading: loadAnomaly } = useAnomalies()
+  const { data: totalReservado = 0, isLoading: loadReservas } = useTotalReservado()
 
-  const isLoading = loadTx || loadInv || loadGoals || loadScore || loadAnomaly
+  const isLoading = loadTx || loadInv || loadGoals || loadScore || loadAnomaly || loadReservas
 
-  // ── Fluxo de caixa por mês (últimos 6 meses) ──────────────────────────────
+  // ── Fluxo de caixa por mês (últimos 6 meses) ─────────────────────────────
 
   const cashflowData = useMemo(() => {
     const now = new Date()
@@ -62,7 +72,7 @@ export function useDashboard() {
     return months
   }, [transactions])
 
-  // ── Patrimônio acumulado por mês (receitas - despesas cumulativo) ─────────
+  // ── Patrimônio acumulado por mês ─────────────────────────────────────────
 
   const patrimonioData = useMemo(() => {
     const now = new Date()
@@ -88,7 +98,7 @@ export function useDashboard() {
     return months
   }, [transactions, totalInvestido])
 
-  // ── Gastos por categoria (mês corrente) ───────────────────────────────────
+  // ── Gastos por categoria (mês corrente) ──────────────────────────────────
 
   const categoriaData = useMemo(() => {
     const now = new Date()
@@ -122,28 +132,30 @@ export function useDashboard() {
       }))
   }, [transactions])
 
-  // ── Score atual ───────────────────────────────────────────────────────────
+  // ── KPIs ─────────────────────────────────────────────────────────────────
+  //
+  // Patrimônio real = caixinhas (dinheiro guardado por categoria)
+  //                 + investimentos (CDBs e outros)
+  //
+  // Não usa totalReceitas - totalDespesas porque isso reflete só o fluxo
+  // de caixa das transações, sem representar o que está efetivamente guardado.
+  //
+  const patrimonio = totalReservado + totalInvestido
 
   const scoreAtual = currentScore ? Number(currentScore.score) : null
 
-  // ── KPIs ──────────────────────────────────────────────────────────────────
-
-  const patrimonio = totalReceitas + totalDespesas + totalInvestido
-
   return {
     isLoading,
-    // KPIs
     patrimonio,
+    totalReservado,
     totalReceitas,
     totalDespesas,
     totalInvestido,
     totalRendimentos,
     scoreAtual,
-    // Charts
     cashflowData,
     patrimonioData,
     categoriaData,
-    // Listas
     recentes,
     metasAtivas,
     anomalies,
