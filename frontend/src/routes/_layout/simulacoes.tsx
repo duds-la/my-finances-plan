@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useState } from "react"
-import { Plus, Trash2, ChevronDown, ChevronUp, Loader2, Calculator, TrendingUp, Target } from "lucide-react"
+import { Plus, Trash2, ChevronDown, ChevronUp, Loader2, Calculator, TrendingUp, Target, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -18,9 +18,9 @@ const fmtBRL = (v: number) =>
   Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 2 })
 
 const TIPOS: Record<string, { label: string; icon: React.ElementType; cor: string }> = {
-  juros_compostos: { label: "Juros Compostos", icon: TrendingUp, cor: "#4ade80" },
-  prazo_meta: { label: "Prazo para Meta", icon: Target, cor: "#a78bfa" },
-  comparacao_investimento: { label: "Comparação", icon: Calculator, cor: "#22d3ee" },
+  juros_compostos:         { label: "Juros Compostos", icon: TrendingUp,  cor: "#4ade80" },
+  prazo_meta:              { label: "Prazo para Meta", icon: Target,       cor: "#a78bfa" },
+  comparacao_investimento: { label: "Comparação",      icon: Calculator,   cor: "#22d3ee" },
 }
 
 // ── Calculadoras ──────────────────────────────────────────────────────────────
@@ -30,15 +30,12 @@ function calcJurosCompostos(params: Record<string, number>) {
   const r = taxa_mensal / 100
   let montante = principal
   const historico: number[] = [principal]
-
   for (let i = 0; i < meses; i++) {
     montante = montante * (1 + r) + aporte_mensal
     historico.push(Math.round(montante * 100) / 100)
   }
-
   const total_investido = principal + aporte_mensal * meses
   const juros_ganhos = montante - total_investido
-
   return {
     montante_final: Math.round(montante * 100) / 100,
     total_investido: Math.round(total_investido * 100) / 100,
@@ -52,19 +49,14 @@ function calcPrazoMeta(params: Record<string, number>) {
   const r = taxa_mensal / 100
   let saldo = valor_atual
   let meses = 0
-
   while (saldo < valor_alvo && meses < 600) {
     saldo = saldo * (1 + r) + aporte_mensal
     meses++
   }
-
-  const anos = Math.floor(meses / 12)
-  const meses_restantes = meses % 12
-
   return {
     meses_total: meses,
-    anos,
-    meses_restantes,
+    anos: Math.floor(meses / 12),
+    meses_restantes: meses % 12,
     saldo_final: Math.round(saldo * 100) / 100,
     total_aportado: Math.round(valor_atual + aporte_mensal * meses),
   }
@@ -74,29 +66,25 @@ function calcComparacao(params: Record<string, number>) {
   const { principal, meses, taxa_a, taxa_b } = params
   const ra = taxa_a / 100
   const rb = taxa_b / 100
-
   const montante_a = principal * Math.pow(1 + ra, meses)
   const montante_b = principal * Math.pow(1 + rb, meses)
   const diferenca = Math.abs(montante_a - montante_b)
-  const melhor = montante_a >= montante_b ? "Opção A" : "Opção B"
-
   return {
     montante_a: Math.round(montante_a * 100) / 100,
     montante_b: Math.round(montante_b * 100) / 100,
     diferenca: Math.round(diferenca * 100) / 100,
-    melhor,
+    melhor: montante_a >= montante_b ? "Opção A" : "Opção B",
     rendimento_a: Math.round((montante_a - principal) * 100) / 100,
     rendimento_b: Math.round((montante_b - principal) * 100) / 100,
   }
 }
 
-// ── Formulários por tipo ──────────────────────────────────────────────────────
+// ── Formulários ───────────────────────────────────────────────────────────────
 
 function FormJurosCompostos({ onSave }: { onSave: (p: Record<string, number>, r: Record<string, unknown>) => void }) {
   const [f, setF] = useState({ principal: "", taxa_mensal: "", meses: "", aporte_mensal: "" })
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setF((prev) => ({ ...prev, [k]: e.target.value }))
-
+    setF(prev => ({ ...prev, [k]: e.target.value }))
   const calcular = () => {
     const params = {
       principal: parseFloat(f.principal) || 0,
@@ -105,10 +93,8 @@ function FormJurosCompostos({ onSave }: { onSave: (p: Record<string, number>, r:
       aporte_mensal: parseFloat(f.aporte_mensal) || 0,
     }
     if (!params.principal || !params.taxa_mensal || !params.meses) return
-    const result = calcJurosCompostos(params)
-    onSave(params, result)
+    onSave(params, calcJurosCompostos(params))
   }
-
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
@@ -140,8 +126,7 @@ function FormJurosCompostos({ onSave }: { onSave: (p: Record<string, number>, r:
 function FormPrazoMeta({ onSave }: { onSave: (p: Record<string, number>, r: Record<string, unknown>) => void }) {
   const [f, setF] = useState({ valor_alvo: "", valor_atual: "", aporte_mensal: "", taxa_mensal: "" })
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setF((prev) => ({ ...prev, [k]: e.target.value }))
-
+    setF(prev => ({ ...prev, [k]: e.target.value }))
   const calcular = () => {
     const params = {
       valor_alvo: parseFloat(f.valor_alvo) || 0,
@@ -150,10 +135,8 @@ function FormPrazoMeta({ onSave }: { onSave: (p: Record<string, number>, r: Reco
       taxa_mensal: parseFloat(f.taxa_mensal) || 0,
     }
     if (!params.valor_alvo || !params.aporte_mensal) return
-    const result = calcPrazoMeta(params)
-    onSave(params, result)
+    onSave(params, calcPrazoMeta(params))
   }
-
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
@@ -185,8 +168,7 @@ function FormPrazoMeta({ onSave }: { onSave: (p: Record<string, number>, r: Reco
 function FormComparacao({ onSave }: { onSave: (p: Record<string, number>, r: Record<string, unknown>) => void }) {
   const [f, setF] = useState({ principal: "", meses: "", taxa_a: "", taxa_b: "" })
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setF((prev) => ({ ...prev, [k]: e.target.value }))
-
+    setF(prev => ({ ...prev, [k]: e.target.value }))
   const calcular = () => {
     const params = {
       principal: parseFloat(f.principal) || 0,
@@ -195,10 +177,8 @@ function FormComparacao({ onSave }: { onSave: (p: Record<string, number>, r: Rec
       taxa_b: parseFloat(f.taxa_b) || 0,
     }
     if (!params.principal || !params.meses || !params.taxa_a || !params.taxa_b) return
-    const result = calcComparacao(params)
-    onSave(params, result)
+    onSave(params, calcComparacao(params))
   }
-
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
@@ -252,16 +232,10 @@ function ResultCard({ sim, onDelete }: { sim: Simulation; onDelete: () => void }
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted"
-          >
+          <button onClick={() => setExpanded(v => !v)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted">
             {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
-          <button
-            onClick={onDelete}
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-          >
+          <button onClick={onDelete} className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
             <Trash2 size={14} />
           </button>
         </div>
@@ -269,7 +243,6 @@ function ResultCard({ sim, onDelete }: { sim: Simulation; onDelete: () => void }
 
       {expanded && (
         <div className="mt-4 space-y-3">
-          {/* Parâmetros */}
           <div className="rounded-lg bg-muted/50 p-3">
             <p className="mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Parâmetros</p>
             <div className="grid grid-cols-2 gap-x-4 gap-y-1">
@@ -285,8 +258,6 @@ function ResultCard({ sim, onDelete }: { sim: Simulation; onDelete: () => void }
               ))}
             </div>
           </div>
-
-          {/* Resultado */}
           {Object.keys(r).length > 0 && (
             <div className="rounded-lg border p-3" style={{ borderColor: `${cor}40`, background: `${cor}08` }}>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: cor }}>Resultado</p>
@@ -309,7 +280,7 @@ function ResultCard({ sim, onDelete }: { sim: Simulation; onDelete: () => void }
   )
 }
 
-// ── Modal nova simulação ──────────────────────────────────────────────────────
+// ── Modal nova simulação — CORRIGIDO para mobile ──────────────────────────────
 
 function NovaSimulacaoModal({ onClose }: { onClose: () => void }) {
   const [tipo, setTipo] = useState<string | null>(null)
@@ -317,45 +288,63 @@ function NovaSimulacaoModal({ onClose }: { onClose: () => void }) {
 
   const handleSave = (params: Record<string, number>, result: Record<string, unknown>) => {
     if (!tipo) return
-    createMut.mutate(
-      { simulation_type: tipo, parameters: params, result },
-      { onSuccess: onClose }
-    )
+    createMut.mutate({ simulation_type: tipo, parameters: params, result }, { onSuccess: onClose })
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center">
-      <div className="w-full max-w-md rounded-t-2xl border border-border bg-card p-5 sm:rounded-2xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold">
-            {tipo ? TIPOS[tipo]?.label : "Nova Simulação"}
-          </h2>
-          <button
-            onClick={tipo ? () => setTipo(null) : onClose}
-            className="rounded-lg px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
-          >
-            {tipo ? "← Voltar" : "✕"}
-          </button>
-        </div>
+    <>
+      {/* Backdrop — z-[60] fica acima da bottom nav (z-50) */}
+      <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-        {!tipo ? (
-          <div className="space-y-2">
-            {Object.entries(TIPOS).map(([key, { label, icon: Icon, cor }]) => (
-              <button
-                key={key}
-                onClick={() => setTipo(key)}
-                className="flex w-full items-center gap-3 rounded-xl border border-border p-3 text-left hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex size-8 items-center justify-center rounded-lg" style={{ background: `${cor}20` }}>
-                  <Icon size={14} style={{ color: cor }} />
-                </div>
-                <span className="text-sm font-medium">{label}</span>
-              </button>
-            ))}
+      <div className="fixed inset-0 z-[61] flex items-end sm:items-center justify-center pointer-events-none">
+        <div className="pointer-events-auto w-full sm:max-w-md flex flex-col max-h-[90svh] rounded-t-2xl sm:rounded-2xl border border-border bg-card shadow-xl">
+
+          {/* Handle mobile */}
+          <div className="flex justify-center pt-3 pb-1 sm:hidden shrink-0">
+            <div className="h-1 w-10 rounded-full bg-border" />
           </div>
-        ) : (
-          <div>
-            {createMut.isPending ? (
+
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 pt-3 pb-4 border-b border-border shrink-0">
+            <h2 className="text-base font-semibold">
+              {tipo ? TIPOS[tipo]?.label : "Nova Simulação"}
+            </h2>
+            <div className="flex items-center gap-2">
+              {tipo && (
+                <button
+                  onClick={() => setTipo(null)}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  ← Voltar
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted transition-colors"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          </div>
+
+          {/* Body com scroll — crítico para formulários longos */}
+          <div className="flex-1 overflow-y-auto px-5 py-4">
+            {!tipo ? (
+              <div className="space-y-2">
+                {Object.entries(TIPOS).map(([key, { label, icon: Icon, cor }]) => (
+                  <button
+                    key={key}
+                    onClick={() => setTipo(key)}
+                    className="flex w-full items-center gap-3 rounded-xl border border-border p-3 text-left hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex size-8 items-center justify-center rounded-lg" style={{ background: `${cor}20` }}>
+                      <Icon size={14} style={{ color: cor }} />
+                    </div>
+                    <span className="text-sm font-medium">{label}</span>
+                  </button>
+                ))}
+              </div>
+            ) : createMut.isPending ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 size={20} className="animate-spin text-muted-foreground" />
               </div>
@@ -367,9 +356,9 @@ function NovaSimulacaoModal({ onClose }: { onClose: () => void }) {
               <FormComparacao onSave={handleSave} />
             )}
           </div>
-        )}
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -382,7 +371,7 @@ function SimulacoesPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-4 p-4 pb-24 sm:p-6 sm:pb-6">
+      <div className="space-y-4">
         <div className="h-8 w-48 animate-pulse rounded bg-muted" />
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => <div key={i} className="h-20 animate-pulse rounded-xl bg-muted" />)}
@@ -392,13 +381,13 @@ function SimulacoesPage() {
   }
 
   return (
-    <div className="space-y-4 p-4 pb-24 sm:space-y-5 sm:p-6 sm:pb-6">
+    <div className="space-y-4">
       {modalOpen && <NovaSimulacaoModal onClose={() => setModalOpen(false)} />}
 
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold tracking-tight sm:text-xl">Simulações</h1>
-          <p className="text-xs text-muted-foreground sm:text-sm">
+          <p className="text-xs text-muted-foreground">
             {simulations.length} simulação{simulations.length !== 1 ? "ões" : ""} salva{simulations.length !== 1 ? "s" : ""}
           </p>
         </div>
@@ -410,10 +399,7 @@ function SimulacoesPage() {
       {/* Cards de tipos disponíveis */}
       <div className="grid grid-cols-3 gap-3">
         {Object.entries(TIPOS).map(([, { label, icon: Icon, cor }]) => (
-          <div
-            key={label}
-            className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-3 text-center"
-          >
+          <div key={label} className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-3 text-center">
             <div className="flex size-8 items-center justify-center rounded-lg" style={{ background: `${cor}20` }}>
               <Icon size={14} style={{ color: cor }} />
             </div>
@@ -435,12 +421,8 @@ function SimulacoesPage() {
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Salvas</h2>
           {[...simulations]
             .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-            .map((sim) => (
-              <ResultCard
-                key={sim.id}
-                sim={sim}
-                onDelete={() => deleteMut.mutate(sim.id)}
-              />
+            .map(sim => (
+              <ResultCard key={sim.id} sim={sim} onDelete={() => deleteMut.mutate(sim.id)} />
             ))}
         </div>
       )}
