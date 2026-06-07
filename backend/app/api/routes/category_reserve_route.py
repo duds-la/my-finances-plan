@@ -33,7 +33,6 @@ def _enrich_reserve(
 ) -> Category_Reserve_Schema_Enriched:
     cat = db.get(Transaction_Category, reserve.category_id)
 
-    # Gasto real: transações negativas já lançadas no mês
     spent_raw = (
         db.query(func.sum(Transaction.transaction_value))
         .filter(
@@ -48,7 +47,6 @@ def _enrich_reserve(
     )
     spent = abs(float(spent_raw))
 
-    # Comprometido: parcelas pendentes com vencimento no mês
     committed = get_committed_by_category(db, user_id, reserve.category_id, month, year)
 
     reserved  = float(reserve.reserved_value)
@@ -62,6 +60,8 @@ def _enrich_reserve(
         category_id=reserve.category_id,
         category_name=cat.description if cat else "—",
         category_acronym=(cat.acronym or "?").strip() if cat else "?",
+        month=reserve.month,
+        year=reserve.year,
         reserved_value=reserved,
         spent_value=spent,
         committed_value=committed,
@@ -84,9 +84,14 @@ def create(
     if not category:
         raise HTTPException(status_code=404, detail=f"Transaction Category with id {data.category_id} not found")
 
-    existing = repository.get_by_category_and_user(db, data.category_id, current_user.id)
+    existing = repository.get_by_category_month_year(
+        db, current_user.id, data.category_id, data.month, data.year
+    )
     if existing:
-        raise HTTPException(status_code=409, detail=f"A reserve for category {data.category_id} already exists. Use PATCH to update it.")
+        raise HTTPException(
+            status_code=409,
+            detail=f"A reserve for category {data.category_id} in {data.month}/{data.year} already exists."
+        )
 
     payload = data.model_dump()
     payload["user_id"] = current_user.id
@@ -104,7 +109,7 @@ def get_all(
 @router.get("/summary", response_model=Reserve_Summary_Schema, status_code=200)
 def get_summary(
     month: int | None = None,
-    year: int | None = None,
+    year:  int | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -112,7 +117,7 @@ def get_summary(
     month = month or now.month
     year  = year  or now.year
 
-    reserves = repository.get_all_by_user(db, current_user.id)
+    reserves = repository.get_by_month_year(db, current_user.id, month, year)
     enriched = [_enrich_reserve(db, r, current_user.id, month, year) for r in reserves]
 
     total_reserved  = sum(e.reserved_value   for e in enriched)
@@ -120,9 +125,14 @@ def get_summary(
     total_committed = sum(e.committed_value  for e in enriched)
     total_available = sum(e.available_value  for e in enriched)
 
+    # Saldo livre = saldo total de transações do mês - total reservado
     saldo_raw = (
         db.query(func.sum(Transaction.transaction_value))
-        .filter(Transaction.user_id == current_user.id)
+        .filter(
+            Transaction.user_id == current_user.id,
+            func.extract("month", Transaction.transaction_date) == month,
+            func.extract("year",  Transaction.transaction_date) == year,
+        )
         .scalar()
         or 0
     )

@@ -338,7 +338,16 @@ function ParcelamentosPage() {
   const [filter, setFilter] = useState<"all" | "active" | "completed" | "cancelled">("all")
 
   const { data: summary, isLoading } = useSummary(month, year)
-  const plans = (summary?.plans ?? []).filter(p => filter === "all" || p.status === filter)
+  const plans = (summary?.plans ?? []).filter(p => {
+    if (p.status === "completed" || p.status === "cancelled") {
+      return filter === "all" || filter === p.status
+    }
+    const hasInstallmentInMonth = p.installments.some(inst => {
+      const d = new Date(inst.due_date + "T00:00:00")
+      return d.getMonth() + 1 === month && d.getFullYear() === year
+    })
+    return hasInstallmentInMonth && (filter === "all" || filter === "active")
+  })
 
   const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"]
   const prevMonth = () => { if (month === 1) { setMonth(12); setYear(y => y - 1) } else setMonth(m => m - 1) }

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from typing import List
+from pydantic import BaseModel
 
 from app.database.session import get_db
 from app.api.deps import get_current_user
@@ -21,14 +22,6 @@ repository = Budget_Repository()
 
 
 def _enrich_budget(db: Session, budget, user_id: int):
-    """
-    Calcula current_spent, consumed_percentage, committed_value
-    e effective_remaining para um orçamento.
-
-    - current_spent      : transações negativas já lançadas no mês/ano
-    - committed_value    : parcelas pendentes que vencem no mesmo mês/ano
-    - effective_remaining: limite - gasto real - comprometido
-    """
     spent_raw = (
         db.query(func.sum(Transaction.transaction_value))
         .filter(
@@ -56,6 +49,22 @@ def _enrich_budget(db: Session, budget, user_id: int):
     return budget
 
 
+# ── Schema para o endpoint de cópia ──────────────────────────────────────────
+
+class Budget_Copy_Request(BaseModel):
+    from_month: int
+    from_year: int
+    to_month: int
+    to_year: int
+    overwrite: bool = False  # se True, sobrescreve categorias que já existem no destino
+
+
+class Budget_Copy_Response(BaseModel):
+    created: int
+    skipped: int
+    overwritten: int
+
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/", response_model=Budget_Schema_Response, status_code=status.HTTP_201_CREATED)
@@ -72,6 +81,58 @@ def create(
     payload["user_id"] = current_user.id
     budget = repository.create(db, payload)
     return _enrich_budget(db, budget, current_user.id)
+
+
+@router.post("/copy", response_model=Budget_Copy_Response, status_code=status.HTTP_200_OK)
+def copy_budgets(
+    data: Budget_Copy_Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Copia todos os orçamentos de from_month/from_year para to_month/to_year.
+    - Categorias que já existem no destino são puladas (ou sobrescritas se overwrite=True).
+    - Retorna quantos foram criados, pulados e sobrescritos.
+    """
+    if data.from_month == data.to_month and data.from_year == data.to_year:
+        raise HTTPException(status_code=400, detail="Mês de origem e destino são iguais.")
+
+    source_budgets = repository.get_by_month_year(
+        db, current_user.id, data.from_month, data.from_year
+    )
+    if not source_budgets:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Nenhum orçamento encontrado em {data.from_month}/{data.from_year}."
+        )
+
+    dest_budgets = repository.get_by_month_year(
+        db, current_user.id, data.to_month, data.to_year
+    )
+    dest_cat_ids = {b.category_id: b for b in dest_budgets}
+
+    created = skipped = overwritten = 0
+
+    for src in source_budgets:
+        existing = dest_cat_ids.get(src.category_id)
+
+        if existing:
+            if data.overwrite:
+                repository.update(db, existing, {"limit_value": src.limit_value})
+                overwritten += 1
+            else:
+                skipped += 1
+        else:
+            repository.create(db, {
+                "user_id":     current_user.id,
+                "category_id": src.category_id,
+                "month":       data.to_month,
+                "year":        data.to_year,
+                "limit_value": src.limit_value,
+            })
+            created += 1
+
+    return Budget_Copy_Response(created=created, skipped=skipped, overwritten=overwritten)
 
 
 @router.get("/", response_model=List[Budget_Schema_Response], status_code=200)

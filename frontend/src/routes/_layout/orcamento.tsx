@@ -1,7 +1,7 @@
 // frontend/src/routes/_layout/orcamento.tsx
 import { createFileRoute } from "@tanstack/react-router"
 import { useState } from "react"
-import { Plus, X, Loader2, Wallet, Trash2 } from "lucide-react"
+import { Plus, X, Loader2, Wallet, Trash2, Copy, ChevronLeft, ChevronRight, CheckCircle2, AlertCircle } from "lucide-react"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { cn } from "@/lib/utils"
@@ -15,6 +15,8 @@ export const Route = createFileRoute("/_layout/orcamento")({
   head: () => ({ meta: [{ title: "Orçamento — FinanceOS" }] }),
 })
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+
 interface Budget {
   id: number; user_id: number; category_id: number; month: number; year: number
   limit_value: number; current_spent: number; consumed_percentage: number
@@ -25,11 +27,26 @@ interface BudgetEnriched extends Budget {
   categoryName: string; categoryAcronym: string
   spentPct: number; committedPct: number; isOver: boolean
 }
+interface CopyResult { created: number; skipped: number; overwritten: number }
+
+const MONTH_NAMES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+]
+
+const fmtBRL = (v: number) =>
+  Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+
+const COLORS = ["#4ade80", "#22d3ee", "#a78bfa", "#fbbf24", "#f87171", "#fb923c", "#38bdf8", "#e879f9"]
+
+// ── Query keys ────────────────────────────────────────────────────────────────
 
 const budgetKeys = {
   all: ["budgets"] as const,
   filter: (m: number, y: number) => ["budgets", m, y] as const,
 }
+
+// ── Hooks ─────────────────────────────────────────────────────────────────────
 
 function useBudgets(month: number, year: number) {
   return useQuery<Budget[]>({
@@ -37,6 +54,7 @@ function useBudgets(month: number, year: number) {
     queryFn: () => api.get(`${BASE}/budget/filter?month=${month}&year=${year}`).then(r => r.data),
   })
 }
+
 function useCreateBudget() {
   const qc = useQueryClient()
   return useMutation({
@@ -44,6 +62,7 @@ function useCreateBudget() {
     onSuccess: () => qc.invalidateQueries({ queryKey: budgetKeys.all }),
   })
 }
+
 function useDeleteBudget() {
   const qc = useQueryClient()
   return useMutation({
@@ -52,66 +71,291 @@ function useDeleteBudget() {
   })
 }
 
-const fmtBRL = (v: number) => Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"]
-const COLORS = ["#4ade80","#22d3ee","#a78bfa","#fbbf24","#f87171","#fb923c","#38bdf8","#f472b6"]
+function useCopyBudgets() {
+  const qc = useQueryClient()
+  return useMutation<CopyResult, Error, {
+    from_month: number; from_year: number
+    to_month: number; to_year: number
+    overwrite: boolean
+  }>({
+    mutationFn: (data) => api.post(`${BASE}/budget/copy`, data).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: budgetKeys.all }),
+  })
+}
 
-// ── Modal mobile-safe ─────────────────────────────────────────────────────────
+// ── Modal: Nova categoria de orçamento ────────────────────────────────────────
 
-function NovoBudgetModal({ month, year, onClose }: { month: number; year: number; onClose: () => void }) {
+function NovaCategoriaModal({
+  month, year, onClose,
+}: { month: number; year: number; onClose: () => void }) {
   const { data: categorias = [] } = useTransactionCategories()
   const createMut = useCreateBudget()
+
   const [form, setForm] = useState({ category_id: "", limit_value: "" })
-  const isValid = form.category_id !== "" && form.limit_value.trim() !== ""
+  const isValid = !!form.category_id && !!form.limit_value && Number(form.limit_value) > 0
 
   const handleSubmit = () => {
     if (!isValid) return
     createMut.mutate(
-      { category_id: Number(form.category_id), month, year, limit_value: Number(form.limit_value.replace(",", ".")) },
-      { onSuccess: onClose }
+      { category_id: Number(form.category_id), month, year, limit_value: Number(form.limit_value) },
+      { onSuccess: onClose },
     )
   }
 
   return (
     <>
-      <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed inset-0 z-[61] flex items-end sm:items-center justify-center pointer-events-none">
-        <div className="pointer-events-auto w-full sm:max-w-sm flex flex-col max-h-[90svh] rounded-t-2xl sm:rounded-2xl border border-border bg-card shadow-xl">
-          <div className="flex justify-center pt-3 pb-1 sm:hidden shrink-0">
-            <div className="h-1 w-10 rounded-full bg-border" />
+      <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-x-0 bottom-0 z-[61] flex flex-col rounded-t-2xl border-t border-border bg-card max-h-[90svh]">
+        <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-border">
+          <h2 className="text-sm font-semibold">Nova Categoria de Orçamento</h2>
+          <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-muted transition-colors">
+            <X size={15} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Categoria</label>
+            <select
+              value={form.category_id}
+              onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))}
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">Selecione uma categoria</option>
+              {categorias.map(c => <option key={c.id} value={c.id}>{c.description}</option>)}
+            </select>
           </div>
-          <div className="flex items-center justify-between px-5 pt-3 pb-4 border-b border-border shrink-0">
-            <div>
-              <h2 className="text-base font-semibold">Novo Orçamento</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">{MONTHS[month - 1]} / {year}</p>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Limite (R$)</label>
+            <Input
+              type="number" step="0.01" placeholder="0,00"
+              value={form.limit_value}
+              onChange={e => setForm(f => ({ ...f, limit_value: e.target.value }))}
+              className="h-10 text-sm"
+            />
+          </div>
+        </div>
+
+        <div className="shrink-0 flex gap-2 px-5 pb-5 pt-3 border-t border-border">
+          <Button variant="outline" className="flex-1 h-10" onClick={onClose}>Cancelar</Button>
+          <Button className="flex-1 h-10" onClick={handleSubmit} disabled={!isValid || createMut.isPending}>
+            {createMut.isPending ? <Loader2 size={14} className="animate-spin" /> : "Salvar"}
+          </Button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Modal: Copiar orçamento ───────────────────────────────────────────────────
+
+function CopiarOrcamentoModal({
+  toMonth, toYear, onClose,
+}: { toMonth: number; toYear: number; onClose: () => void }) {
+  const copyMut = useCopyBudgets()
+
+  // Começa sugerindo o mês anterior ao destino
+  const prevMonth = toMonth === 1 ? 12 : toMonth - 1
+  const prevYear  = toMonth === 1 ? toYear - 1 : toYear
+
+  const [fromMonth, setFromMonth] = useState(prevMonth)
+  const [fromYear,  setFromYear]  = useState(prevYear)
+  const [overwrite, setOverwrite] = useState(false)
+  const [result, setResult] = useState<CopyResult | null>(null)
+  const [error, setError]   = useState<string | null>(null)
+
+  // Preview: busca quantos orçamentos existem na origem
+  const { data: sourceBudgets = [] } = useBudgets(fromMonth, fromYear)
+
+  const navigateFrom = (dir: -1 | 1) => {
+    let m = fromMonth + dir
+    let y = fromYear
+    if (m < 1)  { m = 12; y-- }
+    if (m > 12) { m = 1;  y++ }
+    // Não deixa ir além do mês anterior ao destino
+    if (y > toYear || (y === toYear && m >= toMonth)) return
+    setFromMonth(m)
+    setFromYear(y)
+    setResult(null)
+    setError(null)
+  }
+
+  const isSameMonthAsTo = fromMonth === toMonth && fromYear === toYear
+  const canNavigateNext = !(
+    (fromMonth === prevMonth && fromYear === prevYear)
+  )
+
+  const handleCopy = () => {
+    setError(null)
+    copyMut.mutate(
+      { from_month: fromMonth, from_year: fromYear, to_month: toMonth, to_year: toYear, overwrite },
+      {
+        onSuccess: (data) => setResult(data),
+        onError: (err: any) => {
+          const msg = err?.response?.data?.detail ?? "Erro ao copiar orçamento."
+          setError(msg)
+        },
+      }
+    )
+  }
+
+  return (
+    <>
+      <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-x-0 bottom-0 z-[61] flex flex-col rounded-t-2xl border-t border-border bg-card max-h-[90svh]">
+        <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-border">
+          <h2 className="text-sm font-semibold">Copiar Orçamento</h2>
+          <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-muted transition-colors">
+            <X size={15} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
+
+          {/* Fluxo: origem → destino */}
+          <div className="flex items-center gap-3">
+            {/* Origem */}
+            <div className="flex-1 rounded-xl border border-border bg-muted/30 p-3 space-y-2">
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide text-center">Copiar de</p>
+              <div className="flex items-center justify-between gap-1">
+                <button
+                  onClick={() => navigateFrom(-1)}
+                  className="rounded-lg p-1 hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                >
+                  <ChevronLeft size={15} />
+                </button>
+                <div className="text-center flex-1">
+                  <p className="text-sm font-semibold">{MONTH_NAMES[fromMonth - 1]}</p>
+                  <p className="text-xs text-muted-foreground">{fromYear}</p>
+                </div>
+                <button
+                  onClick={() => navigateFrom(1)}
+                  disabled={fromMonth === prevMonth && fromYear === prevYear}
+                  className={cn(
+                    "rounded-lg p-1 transition-colors",
+                    (fromMonth === prevMonth && fromYear === prevYear)
+                      ? "text-muted-foreground/30 cursor-not-allowed"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <ChevronRight size={15} />
+                </button>
+              </div>
+              <p className="text-center text-xs text-muted-foreground">
+                {sourceBudgets.length > 0
+                  ? <span className="text-foreground font-medium">{sourceBudgets.length} categoria{sourceBudgets.length > 1 ? "s" : ""}</span>
+                  : "Nenhum orçamento"}
+              </p>
             </div>
-            <button onClick={onClose} className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted transition-colors">
-              <X size={15} />
+
+            {/* Seta */}
+            <div className="shrink-0 text-muted-foreground">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M4 10h12M12 6l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+
+            {/* Destino */}
+            <div className="flex-1 rounded-xl border border-primary/40 bg-primary/5 p-3 space-y-2">
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide text-center">Para</p>
+              <div className="text-center py-1">
+                <p className="text-sm font-semibold">{MONTH_NAMES[toMonth - 1]}</p>
+                <p className="text-xs text-muted-foreground">{toYear}</p>
+              </div>
+              <p className="text-center text-[10px] text-primary/70">mês atual</p>
+            </div>
+          </div>
+
+          {/* Preview das categorias da origem */}
+          {sourceBudgets.length > 0 && !result && (
+            <div className="rounded-xl border border-border bg-muted/20 p-3 space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Categorias que serão copiadas:</p>
+              <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                {sourceBudgets.map((b, i) => (
+                  <div key={b.id} className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="size-2 rounded-full shrink-0"
+                        style={{ background: COLORS[i % COLORS.length] }}
+                      />
+                      <span className="text-xs text-foreground">{b.category_id}</span>
+                    </div>
+                    <span className="text-xs font-medium text-foreground">{fmtBRL(Number(b.limit_value))}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Opção de sobrescrever */}
+          {!result && (
+            <button
+              onClick={() => setOverwrite(v => !v)}
+              className="flex items-center gap-3 w-full rounded-xl border border-border bg-muted/20 p-3 text-left transition-colors hover:bg-muted/40"
+            >
+              <div className={cn(
+                "size-4 rounded border-2 shrink-0 flex items-center justify-center transition-colors",
+                overwrite ? "border-primary bg-primary" : "border-muted-foreground/40"
+              )}>
+                {overwrite && <svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+              </div>
+              <div>
+                <p className="text-xs font-medium">Sobrescrever categorias existentes</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Atualiza o limite de categorias que já existem no mês destino
+                </p>
+              </div>
             </button>
-          </div>
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Categoria</label>
-              <select value={form.category_id} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))}
-                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                <option value="">Selecione uma categoria...</option>
-                {categorias.map(c => <option key={c.id} value={c.id}>{c.description} ({c.acronym})</option>)}
-              </select>
+          )}
+
+          {/* Resultado da cópia */}
+          {result && (
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-3">
+              <div className="flex items-center gap-2 text-emerald-400">
+                <CheckCircle2 size={16} />
+                <p className="text-sm font-semibold">Orçamento copiado!</p>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                {[
+                  { label: "Criados",      value: result.created,     color: "text-emerald-400" },
+                  { label: "Pulados",      value: result.skipped,     color: "text-muted-foreground" },
+                  { label: "Atualizados",  value: result.overwritten, color: "text-amber-400" },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="rounded-lg bg-card border border-border py-2">
+                    <p className={cn("text-lg font-bold", color)}>{value}</p>
+                    <p className="text-[10px] text-muted-foreground">{label}</p>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Limite Mensal (R$)</label>
-              <Input placeholder="0,00" value={form.limit_value} type="number" step="0.01" min="0"
-                onChange={e => setForm(f => ({ ...f, limit_value: e.target.value }))}
-                onKeyDown={e => e.key === "Enter" && isValid && handleSubmit()}
-                className="h-10 text-sm" />
+          )}
+
+          {/* Erro */}
+          {error && (
+            <div className="flex items-start gap-2 rounded-xl border border-rose-500/30 bg-rose-500/5 p-3">
+              <AlertCircle size={15} className="text-rose-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-rose-400">{error}</p>
             </div>
-          </div>
-          <div className="shrink-0 flex gap-2 px-5 pb-5 pt-3 border-t border-border">
-            <Button variant="outline" className="flex-1 h-10" onClick={onClose}>Cancelar</Button>
-            <Button className="flex-1 h-10" onClick={handleSubmit} disabled={!isValid || createMut.isPending}>
-              {createMut.isPending ? <Loader2 size={14} className="animate-spin" /> : "Salvar"}
+          )}
+        </div>
+
+        <div className="shrink-0 flex gap-2 px-5 pb-5 pt-3 border-t border-border">
+          <Button variant="outline" className="flex-1 h-10" onClick={onClose}>
+            {result ? "Fechar" : "Cancelar"}
+          </Button>
+          {!result && (
+            <Button
+              className="flex-1 h-10 gap-1.5"
+              onClick={handleCopy}
+              disabled={sourceBudgets.length === 0 || copyMut.isPending || isSameMonthAsTo}
+            >
+              {copyMut.isPending
+                ? <Loader2 size={14} className="animate-spin" />
+                : <Copy size={14} />}
+              Copiar
             </Button>
-          </div>
+          )}
         </div>
       </div>
     </>
@@ -193,7 +437,8 @@ function OrcamentoPage() {
   const now = new Date()
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [year,  setYear]  = useState(now.getFullYear())
-  const [modal, setModal] = useState(false)
+  const [modal, setModal]       = useState(false)
+  const [copyModal, setCopyModal] = useState(false)
 
   const { data: budgets = [], isLoading } = useBudgets(month, year)
   const { data: categorias = [] }         = useTransactionCategories()
@@ -216,12 +461,23 @@ function OrcamentoPage() {
   const totalLimite    = enriched.reduce((s, b) => s + Number(b.limit_value), 0)
   const totalGasto     = enriched.reduce((s, b) => s + Number(b.current_spent), 0)
   const totalCommitted = enriched.reduce((s, b) => s + Number(b.committed_value), 0)
-  const totalPct       = totalLimite > 0 ? ((totalGasto + totalCommitted) / totalLimite) * 100 : 0
-  const pieData        = enriched.map(b => ({ name: b.categoryName, value: Number(b.current_spent) })).filter(d => d.value > 0)
+  const totalPct       = totalLimite > 0
+    ? ((totalGasto + totalCommitted) / totalLimite) * 100
+    : 0
 
-  // Navegação de mês
-  const prevMonth = () => { if (month === 1) { setMonth(12); setYear(y => y - 1) } else setMonth(m => m - 1) }
-  const nextMonth = () => { if (month === 12) { setMonth(1); setYear(y => y + 1) } else setMonth(m => m + 1) }
+  const pieData = enriched.map((b, i) => ({
+    name: b.categoryName,
+    value: Number(b.limit_value),
+    color: COLORS[i % COLORS.length],
+  }))
+
+  const navigateMonth = (dir: -1 | 1) => {
+    let m = month + dir
+    let y = year
+    if (m < 1)  { m = 12; y-- }
+    if (m > 12) { m = 1;  y++ }
+    setMonth(m); setYear(y)
+  }
 
   return (
     <div className="space-y-4">
@@ -229,86 +485,118 @@ function OrcamentoPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold tracking-tight sm:text-xl">Orçamento</h1>
-          <p className="text-xs text-muted-foreground">{enriched.length} categoria{enriched.length !== 1 ? "s" : ""} configurada{enriched.length !== 1 ? "s" : ""}</p>
+          <p className="text-xs text-muted-foreground">
+            {isLoading ? "Carregando..." : `${enriched.length} categoria${enriched.length !== 1 ? "s" : ""}`}
+          </p>
         </div>
-        <Button size="sm" className="gap-1.5" onClick={() => setModal(true)}>
-          <Plus size={14} /> Novo
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            size="sm" variant="outline"
+            className="gap-1.5"
+            onClick={() => setCopyModal(true)}
+          >
+            <Copy size={14} />
+            <span className="hidden sm:inline">Copiar de...</span>
+          </Button>
+          <Button size="sm" className="gap-1.5" onClick={() => setModal(true)}>
+            <Plus size={14} /> Nova
+          </Button>
+        </div>
       </div>
 
-      {/* Seletor de mês — scroll horizontal em mobile */}
-      <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-card px-4 py-3">
-        <button onClick={prevMonth} className="flex size-8 items-center justify-center rounded-lg hover:bg-muted transition-colors text-muted-foreground">‹</button>
-        <span className="text-sm font-semibold">{MONTHS[month - 1]} {year}</span>
-        <button onClick={nextMonth} className="flex size-8 items-center justify-center rounded-lg hover:bg-muted transition-colors text-muted-foreground">›</button>
+      {/* Navegação de mês */}
+      <div className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-2.5">
+        <button onClick={() => navigateMonth(-1)}
+          className="rounded-lg p-1.5 hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+          <ChevronLeft size={16} />
+        </button>
+        <p className="text-sm font-semibold">
+          {MONTH_NAMES[month - 1]} {year}
+        </p>
+        <button onClick={() => navigateMonth(1)}
+          className="rounded-lg p-1.5 hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+          <ChevronRight size={16} />
+        </button>
       </div>
 
+      {/* KPIs */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        {[
+          { label: "Limite total",  value: fmtBRL(totalLimite), color: "text-foreground" },
+          { label: "Gasto",         value: fmtBRL(totalGasto),  color: totalGasto > totalLimite ? "text-rose-500" : "text-rose-400" },
+          { label: "Consumido",     value: `${totalPct.toFixed(0)}%`, color: totalPct >= 100 ? "text-rose-500" : totalPct >= 80 ? "text-amber-500" : "text-emerald-500" },
+        ].map(({ label, value, color }) => (
+          <div key={label} className="rounded-xl border border-border bg-card p-3">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</p>
+            <p className={cn("mt-1 text-sm font-bold sm:text-base", color)}>{value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Gráfico pizza */}
+      {enriched.length > 0 && (
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-sm font-semibold mb-3">Distribuição do limite</p>
+          <div className="flex gap-4 items-center">
+            <div className="w-28 h-28 shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={pieData} dataKey="value" cx="50%" cy="50%" innerRadius={28} outerRadius={52} strokeWidth={0}>
+                    {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                  </Pie>
+                  <Tooltip
+                    formatter={(v: number) => fmtBRL(v)}
+                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex-1 space-y-1.5 min-w-0">
+              {pieData.map((entry, i) => (
+                <div key={i} className="flex items-center gap-2 min-w-0">
+                  <div className="size-2 rounded-full shrink-0" style={{ background: entry.color }} />
+                  <span className="text-xs text-muted-foreground truncate flex-1">{entry.name}</span>
+                  <span className="text-xs font-medium shrink-0">{fmtBRL(entry.value)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lista de categorias */}
       {isLoading ? (
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => <div key={i} className="h-28 animate-pulse rounded-xl bg-muted" />)}
         </div>
       ) : enriched.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border py-12 text-center">
-          <Wallet size={28} className="text-muted-foreground opacity-40" />
-          <p className="text-sm text-muted-foreground">Nenhum orçamento para {MONTHS[month - 1]}.</p>
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setModal(true)}>
-            <Plus size={14} /> Criar orçamento
-          </Button>
+        <div className="rounded-xl border border-dashed border-border p-10 text-center space-y-3">
+          <Wallet size={28} className="mx-auto text-muted-foreground/40" />
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Nenhuma categoria definida</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">
+              Adicione categorias ou copie o orçamento de um mês anterior
+            </p>
+          </div>
+          <div className="flex gap-2 justify-center">
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setCopyModal(true)}>
+              <Copy size={13} /> Copiar de...
+            </Button>
+            <Button size="sm" className="gap-1.5" onClick={() => setModal(true)}>
+              <Plus size={13} /> Nova categoria
+            </Button>
+          </div>
         </div>
       ) : (
-        <>
-          {/* Resumo */}
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            {[
-              { label: "Limite",    value: fmtBRL(totalLimite),    color: "text-foreground" },
-              { label: "Gasto",     value: fmtBRL(totalGasto),     color: "text-rose-400" },
-              { label: "Uso total", value: `${totalPct.toFixed(0)}%`, color: totalPct >= 100 ? "text-rose-500" : totalPct >= 80 ? "text-amber-500" : "text-emerald-500" },
-            ].map(({ label, value, color }) => (
-              <div key={label} className="rounded-xl border border-border bg-card p-3">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</p>
-                <p className={cn("mt-1 text-sm font-bold", color)}>{value}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Gráfico pizza + lista */}
-          {pieData.length > 0 && (
-            <div className="rounded-xl border border-border bg-card p-4">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Gastos por Categoria</p>
-              <div className="flex items-center gap-4">
-                <div className="h-28 w-28 shrink-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={pieData} dataKey="value" cx="50%" cy="50%" innerRadius={28} outerRadius={48} strokeWidth={0}>
-                        {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                      </Pie>
-                      <Tooltip formatter={(v: any) => fmtBRL(Number(v ?? 0))} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex flex-col gap-1.5 min-w-0 flex-1">
-                  {pieData.map((d, i) => (
-                    <div key={d.name} className="flex items-center gap-2">
-                      <div className="size-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                      <span className="text-xs text-muted-foreground truncate flex-1">{d.name}</span>
-                      <span className="text-xs font-medium shrink-0">{fmtBRL(d.value)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Cards */}
-          <div className="space-y-3">
-            {enriched.map((b, i) => (
-              <BudgetCard key={b.id} budget={b} color={COLORS[i % COLORS.length]} />
-            ))}
-          </div>
-        </>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {enriched.map((b, i) => (
+            <BudgetCard key={b.id} budget={b} color={COLORS[i % COLORS.length]} />
+          ))}
+        </div>
       )}
 
-      {modal && <NovoBudgetModal month={month} year={year} onClose={() => setModal(false)} />}
+      {modal     && <NovaCategoriaModal month={month} year={year} onClose={() => setModal(false)} />}
+      {copyModal && <CopiarOrcamentoModal toMonth={month} toYear={year} onClose={() => setCopyModal(false)} />}
     </div>
   )
 }

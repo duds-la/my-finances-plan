@@ -43,7 +43,8 @@ const typeIcons: Record<string, React.ElementType> = {
   Investimento: TrendingUp,
 }
 
-const tabs = ["Todas", "Entradas", "Saídas", "Investimentos"]
+// "Mês atual" é a primeira aba e o padrão ao abrir a página
+const tabs = ["Mês atual", "Todas", "Entradas", "Saídas", "Investimentos"]
 const tabTypeMap: Record<string, string> = {
   Entradas: "Entrada",
   Saídas: "Saída",
@@ -206,32 +207,44 @@ function TransactionRow({ tx }: { tx: TransactionEnriched }) {
 
 function TransacoesPage() {
   const [modalOpen, setModalOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState("Todas")
+  const [activeTab, setActiveTab] = useState("Mês atual")  // padrão ao abrir
   const [search, setSearch] = useState("")
   const [showHeatmap, setShowHeatmap] = useState(false)
 
-  // Mês/ano do heatmap (começa no mês atual)
   const now = new Date()
-  const [heatmapMonth, setHeatmapMonth] = useState(now.getMonth())  // 0-indexed
+  const [heatmapMonth, setHeatmapMonth] = useState(now.getMonth())
   const [heatmapYear, setHeatmapYear] = useState(now.getFullYear())
 
   const { transactions, isLoading, totalReceitas, totalDespesas } = useTransactions()
 
-  // Navegar mês no heatmap
-  const prevMonth = () => {
+  // Navegação do heatmap
+  const prevHeatmapMonth = () => {
     if (heatmapMonth === 0) { setHeatmapMonth(11); setHeatmapYear(y => y - 1) }
     else setHeatmapMonth(m => m - 1)
   }
-  const nextMonth = () => {
-    const isCurrentMonth = heatmapMonth === now.getMonth() && heatmapYear === now.getFullYear()
-    if (isCurrentMonth) return
+  const nextHeatmapMonth = () => {
+    const isCurrent = heatmapMonth === now.getMonth() && heatmapYear === now.getFullYear()
+    if (isCurrent) return
     if (heatmapMonth === 11) { setHeatmapMonth(0); setHeatmapYear(y => y + 1) }
     else setHeatmapMonth(m => m + 1)
   }
-  const isCurrentMonth = heatmapMonth === now.getMonth() && heatmapYear === now.getFullYear()
+  const isHeatmapCurrentMonth = heatmapMonth === now.getMonth() && heatmapYear === now.getFullYear()
+
+  const isMesAtual = activeTab === "Mês atual"
+  const currentMonth = now.getMonth()
+  const currentYear  = now.getFullYear()
 
   const filtered = transactions.filter(tx => {
-    const matchTab = activeTab === "Todas" ? true : tx.typeName === tabTypeMap[activeTab]
+    // Aba "Mês atual": filtra pelo mês corrente
+    if (isMesAtual) {
+      const d = new Date(tx.transaction_date)
+      if (d.getMonth() !== currentMonth || d.getFullYear() !== currentYear) return false
+    }
+    // Abas de tipo (Entradas, Saídas, Investimentos)
+    const matchTab = (isMesAtual || activeTab === "Todas")
+      ? true
+      : tx.typeName === tabTypeMap[activeTab]
+    // Busca
     const matchSearch = search
       ? tx.categoryName?.toLowerCase().includes(search.toLowerCase()) ||
         tx.typeName?.toLowerCase().includes(search.toLowerCase())
@@ -239,7 +252,14 @@ function TransacoesPage() {
     return matchTab && matchSearch
   })
 
-  const balance = totalReceitas + totalDespesas
+  // KPIs calculados sobre as transações visíveis para refletir o filtro de mês
+  const kpiReceitas = filtered
+    .filter(t => Number(t.transaction_value) > 0)
+    .reduce((s, t) => s + Number(t.transaction_value), 0)
+  const kpiDespesas = filtered
+    .filter(t => Number(t.transaction_value) < 0)
+    .reduce((s, t) => s + Number(t.transaction_value), 0)
+  const balance = kpiReceitas + kpiDespesas
 
   return (
     <div className="space-y-4">
@@ -267,12 +287,12 @@ function TransacoesPage() {
         </div>
       </div>
 
-      {/* KPIs */}
+      {/* KPIs — refletem o filtro ativo */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         {[
-          { label: "Entradas",  value: fmtBRL(totalReceitas),         color: "text-emerald-500" },
-          { label: "Saídas",    value: fmtBRL(Math.abs(totalDespesas)), color: "text-rose-400" },
-          { label: "Saldo",     value: fmtBRL(Math.abs(balance)),      color: balance >= 0 ? "text-emerald-500" : "text-rose-400" },
+          { label: "Entradas", value: fmtBRL(kpiReceitas),         color: "text-emerald-500" },
+          { label: "Saídas",   value: fmtBRL(Math.abs(kpiDespesas)), color: "text-rose-400" },
+          { label: "Saldo",    value: fmtBRL(Math.abs(balance)),    color: balance >= 0 ? "text-emerald-500" : "text-rose-400" },
         ].map(({ label, value, color }) => (
           <div key={label} className="rounded-xl border border-border bg-card p-3">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</p>
@@ -284,10 +304,9 @@ function TransacoesPage() {
       {/* Heatmap (expansível) */}
       {showHeatmap && (
         <div className="space-y-2">
-          {/* Navegação de mês */}
           <div className="flex items-center justify-between px-1">
             <button
-              onClick={prevMonth}
+              onClick={prevHeatmapMonth}
               className="rounded-lg p-1.5 hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
             >
               <ChevronLeft size={16} />
@@ -296,11 +315,11 @@ function TransacoesPage() {
               {MONTH_NAMES[heatmapMonth]} {heatmapYear}
             </p>
             <button
-              onClick={nextMonth}
-              disabled={isCurrentMonth}
+              onClick={nextHeatmapMonth}
+              disabled={isHeatmapCurrentMonth}
               className={cn(
                 "rounded-lg p-1.5 transition-colors",
-                isCurrentMonth
+                isHeatmapCurrentMonth
                   ? "text-muted-foreground/30 cursor-not-allowed"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
@@ -308,7 +327,6 @@ function TransacoesPage() {
               <ChevronRight size={16} />
             </button>
           </div>
-
           <SpendingHeatmap
             transactions={transactions}
             month={heatmapMonth}
@@ -336,7 +354,9 @@ function TransacoesPage() {
             onClick={() => setActiveTab(tab)}
             className={cn(
               "shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
-              activeTab === tab ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+              activeTab === tab
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted"
             )}
           >
             {tab}
@@ -352,7 +372,7 @@ function TransacoesPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-12 text-center text-sm text-muted-foreground">
-            Nenhuma transação encontrada
+            {isMesAtual ? "Nenhuma transação este mês" : "Nenhuma transação encontrada"}
           </div>
         ) : (
           filtered.map(tx => <TransactionRow key={tx.id} tx={tx} />)
