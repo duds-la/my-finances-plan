@@ -213,6 +213,7 @@ def pay_installment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    print(">>> PAY DATA:", data)   # ← adicione esta linha
     """
     Confirma o pagamento de uma parcela:
     1. Cria uma Transaction negativa na categoria do plano

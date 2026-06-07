@@ -16,6 +16,7 @@ export const Route = createFileRoute("/_layout/parcelamentos")({
   component: ParcelamentosPage,
   head: () => ({ meta: [{ title: "Parcelamentos — FinanceOS" }] }),
 })
+const TX_SAIDA_TYPE_ID = 7
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -77,7 +78,9 @@ function usePayInstallment() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ planId, instId }: { planId: number; instId: number }) =>
-      api.post(`${BASE}/installment/${planId}/installments/${instId}/pay`, {}).then(r => r.data),
+      api.post(`${BASE}/installment/${planId}/installments/${instId}/pay`, {
+        transaction_type_id: TX_SAIDA_TYPE_ID,
+      }).then(r => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.all }),
   })
 }

@@ -9,6 +9,7 @@ class Transaction_Schema_Base(BaseModel):
     transaction_date: Optional[datetime] = None
     transaction_type_id: int
     transaction_category_id: int
+    description: Optional[str] = None
  
  
 class Transaction_Schema_Create(Transaction_Schema_Base):
@@ -20,6 +21,7 @@ class Transaction_Schema_Update(BaseModel):
     transaction_date: Optional[datetime] = None
     transaction_type_id: Optional[int] = None
     transaction_category_id: Optional[int] = None
+    description: Optional[str] = None
  
  
 class Transaction_Schema_Response(Transaction_Schema_Base):

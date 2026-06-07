@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, DateTime, NUMERIC
+from sqlalchemy import Column, Integer, ForeignKey, DateTime, NUMERIC, VARCHAR
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -42,6 +42,11 @@ class Transaction(Base):
         Integer,
         ForeignKey("transaction_category.id"),
         nullable=False
+    )
+
+    description = Column(
+        VARCHAR(255), 
+        nullable=True
     )
 
     user = relationship("User")

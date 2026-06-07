@@ -13,6 +13,9 @@ from app.repositories.transaction_type_repository import Transaction_Type_Reposi
 router = APIRouter(prefix="/transaction_type", tags=["transaction_type"])
 repository = Transaction_Type_Repository()
 
+# IDs dos tipos de sistema que não podem ser editados ou excluídos
+PROTECTED_TYPE_IDS = {7, 8, 9}
+
 
 @router.post("/", response_model=Transaction_Type_Response, status_code=status.HTTP_201_CREATED)
 def create(data: Transaction_Type_Create, db: Session = Depends(get_db)):
@@ -39,6 +42,12 @@ def get_by_id(id: int, db: Session = Depends(get_db)):
 
 @router.patch("/{id}", response_model=Transaction_Type_Response)
 def update(id: int, data: Transaction_Type_Update, db: Session = Depends(get_db)):
+    if id in PROTECTED_TYPE_IDS:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Este tipo de transação é do sistema e não pode ser editado."
+        )
+
     obj = repository.get_by_id(db, id)
 
     if not obj:
@@ -60,6 +69,12 @@ def update(id: int, data: Transaction_Type_Update, db: Session = Depends(get_db)
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete(id: int, db: Session = Depends(get_db)):
+    if id in PROTECTED_TYPE_IDS:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Este tipo de transação é do sistema e não pode ser excluído."
+        )
+
     obj = repository.get_by_id(db, id)
 
     if not obj:
