@@ -1,6 +1,7 @@
+// frontend/src/routes/_layout/transacoes.tsx
 import { createFileRoute } from "@tanstack/react-router"
 import { useState } from "react"
-import { ArrowUpRight, ArrowDownRight, TrendingUp, Search, Plus, X, Loader2 } from "lucide-react"
+import { ArrowUpRight, ArrowDownRight, TrendingUp, Search, Plus, X, Loader2, ChevronLeft, ChevronRight, Flame } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -13,6 +14,7 @@ import {
   useTransactionTypes,
   useTransactionCategories,
 } from "@/hooks/api/useCategorias"
+import { SpendingHeatmap } from "@/components/SpendingHeatmap"
 
 export const Route = createFileRoute("/_layout/transacoes")({
   component: TransacoesPage,
@@ -23,6 +25,11 @@ export const Route = createFileRoute("/_layout/transacoes")({
 
 const fmtBRL = (v: number) =>
   Math.abs(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+
+const MONTH_NAMES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+]
 
 const typeColors: Record<string, string> = {
   Entrada: "text-emerald-500 bg-emerald-500/10",
@@ -64,6 +71,11 @@ function NovaTransacaoModal({ onClose }: { onClose: () => void }) {
     return desc.includes("saída") || desc.includes("saida") || desc.includes("despesa")
   }
 
+  const isValid =
+    !!form.transaction_value &&
+    !!form.transaction_type_id &&
+    !!form.transaction_category_id
+
   const handleSubmit = () => {
     const value = parseFloat(form.transaction_value.replace(",", "."))
     if (!value || !form.transaction_type_id || !form.transaction_category_id) return
@@ -72,108 +84,86 @@ function NovaTransacaoModal({ onClose }: { onClose: () => void }) {
       {
         transaction_value: finalValue,
         transaction_date: form.transaction_date
-          ? new Date(form.transaction_date).toISOString()
+          ? `${form.transaction_date}T00:00:00`
           : undefined,
         transaction_type_id: Number(form.transaction_type_id),
         transaction_category_id: Number(form.transaction_category_id),
       },
-      { onSuccess: onClose }
+      { onSuccess: onClose },
     )
   }
 
-  const isValid =
-    form.transaction_value.trim() !== "" &&
-    form.transaction_type_id !== "" &&
-    form.transaction_category_id !== ""
-
   return (
     <>
-      {/* Backdrop — z-[60] fica acima da bottom nav (z-50) */}
-      <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-x-0 bottom-0 z-[61] flex flex-col rounded-t-2xl border-t border-border bg-card max-h-[90svh]">
+        <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-border">
+          <h2 className="text-sm font-semibold">Nova Transação</h2>
+          <button onClick={onClose} className="rounded-lg p-1.5 hover:bg-muted transition-colors">
+            <X size={15} />
+          </button>
+        </div>
 
-      <div className="fixed inset-0 z-[61] flex items-end sm:items-center justify-center pointer-events-none">
-        <div className="pointer-events-auto w-full sm:max-w-md flex flex-col max-h-[90svh] rounded-t-2xl sm:rounded-2xl border border-border bg-card shadow-xl">
-
-          {/* Handle mobile */}
-          <div className="flex justify-center pt-3 pb-1 sm:hidden shrink-0">
-            <div className="h-1 w-10 rounded-full bg-border" />
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Valor (R$)</label>
+            <Input
+              type="number" step="0.01" placeholder="0,00"
+              value={form.transaction_value}
+              onChange={(e) => setForm(f => ({ ...f, transaction_value: e.target.value }))}
+              className="h-10 text-sm"
+            />
           </div>
 
-          {/* Header */}
-          <div className="flex items-center justify-between px-5 pt-3 pb-4 border-b border-border shrink-0">
-            <h2 className="text-base font-semibold">Nova Transação</h2>
-            <button
-              onClick={onClose}
-              className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted transition-colors"
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Data</label>
+            <Input
+              type="date"
+              value={form.transaction_date}
+              onChange={(e) => setForm(f => ({ ...f, transaction_date: e.target.value }))}
+              className="h-10 text-sm"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tipo</label>
+            <select
+              value={form.transaction_type_id}
+              onChange={(e) => setForm(f => ({ ...f, transaction_type_id: e.target.value }))}
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
-              <X size={15} />
-            </button>
+              <option value="">Selecione um tipo</option>
+              {tipos.map(t => <option key={t.id} value={t.id}>{t.description}</option>)}
+            </select>
           </div>
 
-          {/* Body com scroll */}
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Valor (R$)</label>
-              <Input
-                type="number" step="0.01" placeholder="0,00"
-                value={form.transaction_value}
-                onChange={(e) => setForm(f => ({ ...f, transaction_value: e.target.value }))}
-                className="h-10 text-sm"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Data</label>
-              <Input
-                type="date"
-                value={form.transaction_date}
-                onChange={(e) => setForm(f => ({ ...f, transaction_date: e.target.value }))}
-                className="h-10 text-sm"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tipo</label>
-              <select
-                value={form.transaction_type_id}
-                onChange={(e) => setForm(f => ({ ...f, transaction_type_id: e.target.value }))}
-                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="">Selecione um tipo</option>
-                {tipos.map(t => <option key={t.id} value={t.id}>{t.description}</option>)}
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Categoria</label>
-              <select
-                value={form.transaction_category_id}
-                onChange={(e) => setForm(f => ({ ...f, transaction_category_id: e.target.value }))}
-                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="">Selecione uma categoria</option>
-                {categorias.map(c => <option key={c.id} value={c.id}>{c.description}</option>)}
-              </select>
-            </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Categoria</label>
+            <select
+              value={form.transaction_category_id}
+              onChange={(e) => setForm(f => ({ ...f, transaction_category_id: e.target.value }))}
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">Selecione uma categoria</option>
+              {categorias.map(c => <option key={c.id} value={c.id}>{c.description}</option>)}
+            </select>
           </div>
+        </div>
 
-          {/* Footer */}
-          <div className="shrink-0 flex gap-2 px-5 pb-5 pt-3 border-t border-border">
-            <Button variant="outline" className="flex-1 h-10" onClick={onClose}>Cancelar</Button>
-            <Button className="flex-1 h-10" onClick={handleSubmit} disabled={!isValid || createMut.isPending}>
-              {createMut.isPending ? <Loader2 size={14} className="animate-spin" /> : "Salvar"}
-            </Button>
-          </div>
+        <div className="shrink-0 flex gap-2 px-5 pb-5 pt-3 border-t border-border">
+          <Button variant="outline" className="flex-1 h-10" onClick={onClose}>Cancelar</Button>
+          <Button className="flex-1 h-10" onClick={handleSubmit} disabled={!isValid || createMut.isPending}>
+            {createMut.isPending ? <Loader2 size={14} className="animate-spin" /> : "Salvar"}
+          </Button>
         </div>
       </div>
     </>
   )
 }
 
-// ── Linha de transação — usa os campos corretos do hook ───────────────────────
+// ── Linha de transação ────────────────────────────────────────────────────────
 
 function TransactionRow({ tx }: { tx: TransactionEnriched }) {
-  // O hook retorna typeName, categoryName, categoryIcon
   const TypeIcon = typeIcons[tx.typeName] ?? ArrowDownRight
   const isPositive = Number(tx.transaction_value) > 0
   const isInvest = tx.typeName === "Investimento"
@@ -184,7 +174,6 @@ function TransactionRow({ tx }: { tx: TransactionEnriched }) {
     : "text-rose-400"
   const colorClass = typeColors[tx.typeName] ?? "text-muted-foreground bg-muted"
 
-  // transaction_date vem como ISO completo do backend — sem manipulação extra
   const dateStr = new Date(tx.transaction_date).toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "short",
@@ -219,9 +208,27 @@ function TransacoesPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("Todas")
   const [search, setSearch] = useState("")
+  const [showHeatmap, setShowHeatmap] = useState(false)
 
-  // Hook retorna totalReceitas / totalDespesas (não totalEntradas/totalSaidas)
+  // Mês/ano do heatmap (começa no mês atual)
+  const now = new Date()
+  const [heatmapMonth, setHeatmapMonth] = useState(now.getMonth())  // 0-indexed
+  const [heatmapYear, setHeatmapYear] = useState(now.getFullYear())
+
   const { transactions, isLoading, totalReceitas, totalDespesas } = useTransactions()
+
+  // Navegar mês no heatmap
+  const prevMonth = () => {
+    if (heatmapMonth === 0) { setHeatmapMonth(11); setHeatmapYear(y => y - 1) }
+    else setHeatmapMonth(m => m - 1)
+  }
+  const nextMonth = () => {
+    const isCurrentMonth = heatmapMonth === now.getMonth() && heatmapYear === now.getFullYear()
+    if (isCurrentMonth) return
+    if (heatmapMonth === 11) { setHeatmapMonth(0); setHeatmapYear(y => y + 1) }
+    else setHeatmapMonth(m => m + 1)
+  }
+  const isCurrentMonth = heatmapMonth === now.getMonth() && heatmapYear === now.getFullYear()
 
   const filtered = transactions.filter(tx => {
     const matchTab = activeTab === "Todas" ? true : tx.typeName === tabTypeMap[activeTab]
@@ -232,7 +239,7 @@ function TransacoesPage() {
     return matchTab && matchSearch
   })
 
-  const balance = totalReceitas + totalDespesas // totalDespesas já é negativo
+  const balance = totalReceitas + totalDespesas
 
   return (
     <div className="space-y-4">
@@ -244,17 +251,28 @@ function TransacoesPage() {
             {isLoading ? "Carregando..." : `${filtered.length} registro${filtered.length !== 1 ? "s" : ""}`}
           </p>
         </div>
-        <Button size="sm" className="gap-1.5" onClick={() => setModalOpen(true)}>
-          <Plus size={14} /> Nova
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant={showHeatmap ? "default" : "outline"}
+            className="gap-1.5"
+            onClick={() => setShowHeatmap(v => !v)}
+          >
+            <Flame size={14} />
+            <span className="hidden sm:inline">Heatmap</span>
+          </Button>
+          <Button size="sm" className="gap-1.5" onClick={() => setModalOpen(true)}>
+            <Plus size={14} /> Nova
+          </Button>
+        </div>
       </div>
 
-      {/* KPIs — usa totalReceitas/totalDespesas do hook */}
+      {/* KPIs */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         {[
-          { label: "Entradas",  value: fmtBRL(totalReceitas),    color: "text-emerald-500" },
+          { label: "Entradas",  value: fmtBRL(totalReceitas),         color: "text-emerald-500" },
           { label: "Saídas",    value: fmtBRL(Math.abs(totalDespesas)), color: "text-rose-400" },
-          { label: "Saldo",     value: fmtBRL(Math.abs(balance)), color: balance >= 0 ? "text-emerald-500" : "text-rose-400" },
+          { label: "Saldo",     value: fmtBRL(Math.abs(balance)),      color: balance >= 0 ? "text-emerald-500" : "text-rose-400" },
         ].map(({ label, value, color }) => (
           <div key={label} className="rounded-xl border border-border bg-card p-3">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</p>
@@ -262,6 +280,42 @@ function TransacoesPage() {
           </div>
         ))}
       </div>
+
+      {/* Heatmap (expansível) */}
+      {showHeatmap && (
+        <div className="space-y-2">
+          {/* Navegação de mês */}
+          <div className="flex items-center justify-between px-1">
+            <button
+              onClick={prevMonth}
+              className="rounded-lg p-1.5 hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <p className="text-sm font-semibold">
+              {MONTH_NAMES[heatmapMonth]} {heatmapYear}
+            </p>
+            <button
+              onClick={nextMonth}
+              disabled={isCurrentMonth}
+              className={cn(
+                "rounded-lg p-1.5 transition-colors",
+                isCurrentMonth
+                  ? "text-muted-foreground/30 cursor-not-allowed"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+
+          <SpendingHeatmap
+            transactions={transactions}
+            month={heatmapMonth}
+            year={heatmapYear}
+          />
+        </div>
+      )}
 
       {/* Busca */}
       <div className="relative">
