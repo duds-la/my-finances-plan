@@ -282,7 +282,7 @@ function OrcamentoPage() {
                       <Pie data={pieData} dataKey="value" cx="50%" cy="50%" innerRadius={28} outerRadius={48} strokeWidth={0}>
                         {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                       </Pie>
-                      <Tooltip formatter={(v: number) => fmtBRL(v)} />
+                      <Tooltip formatter={(v: any) => fmtBRL(Number(v ?? 0))} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>

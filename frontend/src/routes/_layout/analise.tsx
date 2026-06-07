@@ -352,7 +352,7 @@ function AnalisePage() {
             <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false}
               tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-            <Tooltip {...tooltipStyle} formatter={(v: number) => fmtBRL(v)} />
+            <Tooltip {...tooltipStyle} formatter={(v: any) => fmtBRL(Number(v ?? 0))} />
             <ReferenceLine y={0} stroke="var(--border)" />
             <Bar dataKey="saldo" name="Saldo" radius={[4, 4, 0, 0]}>
               {meses6.map((e, i) => <Cell key={i} fill={e.saldo >= 0 ? "#4ade80" : "#f87171"} />)}
@@ -372,7 +372,7 @@ function AnalisePage() {
               <XAxis type="number" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false}
                 tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
               <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} width={75} />
-              <Tooltip {...tooltipStyle} formatter={(v: number) => fmtBRL(v)} />
+              <Tooltip {...tooltipStyle} formatter={(v: any) => fmtBRL(Number(v ?? 0))} />
               <Bar dataKey="media" name="Média hist." fill="var(--muted)" radius={[0, 3, 3, 0]} />
               <Bar dataKey="atual" name="Mês atual" radius={[0, 3, 3, 0]}>
                 {discrepanciaData.map((e, i) => (
@@ -398,7 +398,7 @@ function AnalisePage() {
                   <Pie data={catData} dataKey="value" cx="50%" cy="50%" innerRadius={36} outerRadius={55} strokeWidth={0}>
                     {catData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                   </Pie>
-                  <Tooltip {...tooltipStyle} formatter={(v: number) => fmtBRL(v)} />
+                  <Tooltip {...tooltipStyle} formatter={(v: any) => fmtBRL(Number(v ?? 0))} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="flex-1 space-y-1.5 overflow-hidden">

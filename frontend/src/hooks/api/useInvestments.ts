@@ -150,6 +150,25 @@ export function useInvestments() {
       return acc
     }, {})
 
+  // Composição por tipo de investimento (para portfolio.tsx)
+  const composicaoPorTipoMap = enriched
+    .filter(i => i.status === "ativo")
+    .reduce<Record<string, number>>((acc, i) => {
+      const key = i.typeName
+      acc[key] = (acc[key] ?? 0) + i.currentValue
+      return acc
+    }, {})
+
+  const totalAtualAtivo = enriched
+    .filter(i => i.status === "ativo")
+    .reduce((s, i) => s + i.currentValue, 0)
+
+  const composicaoPorTipo = Object.entries(composicaoPorTipoMap).map(([name, total]) => ({
+    name,
+    total,
+    pct: totalAtualAtivo > 0 ? Math.round((total / totalAtualAtivo) * 100) : 0,
+  })).sort((a, b) => b.total - a.total)
+
   return {
     investments: enriched,
     eventsByInv,
@@ -160,6 +179,7 @@ export function useInvestments() {
     totalAtual,
     totalRendimentos,
     composicaoPorFinalidade,
+    composicaoPorTipo,
     isLoading: loadingInv || loadingTypes || loadingIncomes || loadingIncomeTypes,
   }
 }

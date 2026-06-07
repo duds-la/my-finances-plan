@@ -92,6 +92,8 @@ export interface DashboardData {
     components?: Record<string, number>
     calculated_at: string
   }>
+  re_valor: number
+  total_investido: number
   mes: number
   ano: number
 }
