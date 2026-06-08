@@ -391,7 +391,7 @@ function PreviewJurosCompostos({ params }: { params: Record<string, number> }) {
             <XAxis dataKey="mes" hide />
             <YAxis hide domain={["auto", "auto"]} />
             <Tooltip
-              formatter={(v: number) => [fmtBRL(v), "Montante"]}
+              formatter={(v: any) => [fmtBRL(v), "Montante"]}
               labelFormatter={(l) => `Mês ${l}`}
               contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
             />
@@ -456,7 +456,7 @@ function PreviewPrazoMeta({ params }: { params: Record<string, number> }) {
             <XAxis dataKey="mes" hide />
             <YAxis hide domain={[0, params.valor_alvo * 1.05]} />
             <Tooltip
-              formatter={(v: number, name: string) => [fmtBRL(v), name === "saldo" ? "Saldo" : "Alvo"]}
+              formatter={(v: any, name: any) => [fmtBRL(v), name === "saldo" ? "Saldo" : "Alvo"]}
               labelFormatter={(l) => `Mês ${l}`}
               contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
             />
@@ -519,7 +519,7 @@ function PreviewComparacao({ params }: { params: Record<string, number> }) {
             <XAxis dataKey="mes" hide />
             <YAxis hide domain={["auto", "auto"]} />
             <Tooltip
-              formatter={(v: number, name: string) => [fmtBRL(v), name === "a" ? "Taxa A" : "Taxa B"]}
+              formatter={(v: any, name: any) => [fmtBRL(v), name === "a" ? "Taxa A" : "Taxa B"]}
               labelFormatter={(l) => `Mês ${l}`}
               contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
             />
@@ -582,7 +582,7 @@ function PreviewParcelamento({ params }: { params: Record<string, number> }) {
               <XAxis dataKey="parcela" hide />
               <YAxis hide domain={[0, "auto"]} />
               <Tooltip
-                formatter={(v: number, name: string) => [fmtBRL(v), name === "saldo" ? "Saldo devedor" : "Juros"]}
+                formatter={(v: any, name: any) => [fmtBRL(v), name === "saldo" ? "Saldo devedor" : "Juros"]}
                 labelFormatter={(l) => `Parcela ${l}`}
                 contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
               />
@@ -649,7 +649,7 @@ function PreviewFIRE({ params }: { params: Record<string, number> }) {
               <XAxis dataKey="periodo" hide />
               <YAxis hide domain={[0, result.patrimonio_necessario * 1.1]} />
               <Tooltip
-                formatter={(v: number, name: string) => [fmtBRL(v), name === "patrimonio" ? "Patrimônio" : "Meta"]}
+                formatter={(v: any, name: any) => [fmtBRL(v), name === "patrimonio" ? "Patrimônio" : "Meta"]}
                 labelFormatter={(l) => `Mês ${l}`}
                 contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
               />
@@ -707,7 +707,7 @@ function PreviewInflacao({ params }: { params: Record<string, number> }) {
             <XAxis dataKey="ano" hide />
             <YAxis hide domain={[0, params.valor_presente * 1.05]} />
             <Tooltip
-              formatter={(v: number, name: string) => [fmtBRL(v), name === "nominal" ? "Valor nominal" : "Poder de compra real"]}
+              formatter={(v: any, name: any) => [fmtBRL(v), name === "nominal" ? "Valor nominal" : "Poder de compra real"]}
               labelFormatter={(l) => `Ano ${l}`}
               contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
             />
@@ -1033,7 +1033,7 @@ function ChartJurosCompostos({ result, cor }: { result: Record<string, unknown>;
           <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
             tickFormatter={fmtBRLShort} tickLine={false} axisLine={false} width={52} />
           <Tooltip
-            formatter={(v: number) => [fmtBRL(v), "Montante"]}
+            formatter={(v: any) => [fmtBRL(v), "Montante"]}
             labelFormatter={(l) => `Mês ${l}`}
             contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
           />
@@ -1075,7 +1075,7 @@ function ChartPrazoMeta({ result, params, cor }: {
           <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
             tickFormatter={fmtBRLShort} tickLine={false} axisLine={false} width={52} />
           <Tooltip
-            formatter={(v: number, name: string) => [fmtBRL(v), name === "saldo" ? "Saldo" : "Alvo"]}
+            formatter={(v: any, name: any) => [fmtBRL(v), name === "saldo" ? "Saldo" : "Alvo"]}
             labelFormatter={(l) => `Mês ${l}`}
             contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
           />
@@ -1113,7 +1113,7 @@ function ChartComparacao({ result }: { result: Record<string, unknown> }) {
           <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
             tickFormatter={fmtBRLShort} tickLine={false} axisLine={false} width={52} />
           <Tooltip
-            formatter={(v: number, name: string) => [fmtBRL(v), name === "a" ? "Taxa A" : "Taxa B"]}
+            formatter={(v: any, name: any) => [fmtBRL(v), name === "a" ? "Taxa A" : "Taxa B"]}
             labelFormatter={(l) => `Mês ${l}`}
             contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
           />
@@ -1148,7 +1148,7 @@ function ChartParcelamento({ result, cor }: { result: Record<string, unknown>; c
           <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
             tickFormatter={fmtBRLShort} tickLine={false} axisLine={false} width={52} />
           <Tooltip
-            formatter={(v: number, name: string) => [fmtBRL(v), name === "saldo" ? "Saldo devedor" : "Juros"]}
+            formatter={(v: any, name: any) => [fmtBRL(v), name === "saldo" ? "Saldo devedor" : "Juros"]}
             labelFormatter={(l) => `Parcela ${l}`}
             contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
           />
@@ -1182,7 +1182,7 @@ function ChartFIRE({ result, cor }: { result: Record<string, unknown>; cor: stri
           <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
             tickFormatter={fmtBRLShort} tickLine={false} axisLine={false} width={52} />
           <Tooltip
-            formatter={(v: number, name: string) => [fmtBRL(v), name === "patrimonio" ? "Patrimônio" : "Meta"]}
+            formatter={(v: any, name: any) => [fmtBRL(v), name === "patrimonio" ? "Patrimônio" : "Meta"]}
             labelFormatter={(l) => `Mês ${l}`}
             contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
           />
@@ -1218,7 +1218,7 @@ function ChartInflacao({ result, params, cor }: {
           <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
             tickFormatter={fmtBRLShort} tickLine={false} axisLine={false} width={52} />
           <Tooltip
-            formatter={(v: number, name: string) => [fmtBRL(v), name === "nominal" ? "Nominal" : "Poder de compra real"]}
+            formatter={(v: any, name: any) => [fmtBRL(v), name === "nominal" ? "Nominal" : "Poder de compra real"]}
             labelFormatter={(l) => `Ano ${l}`}
             contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
           />
@@ -1366,7 +1366,7 @@ function PreviewFinanciamento({ params }: { params: Record<string, number> }) {
               <XAxis dataKey="parcela" hide />
               <YAxis hide domain={[0, "auto"]} />
               <Tooltip
-                formatter={(v: number) => [fmtBRL(v), "Saldo devedor"]}
+                formatter={(v: any) => [fmtBRL(v), "Saldo devedor"]}
                 labelFormatter={(l) => `Parcela ${l}`}
                 contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
               />
@@ -1491,7 +1491,7 @@ function ChartFinanciamento({ result, cor }: { result: Record<string, unknown>; 
           <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
             tickFormatter={fmtBRLShort} tickLine={false} axisLine={false} width={52} />
           <Tooltip
-            formatter={(v: number, name: string) => [
+            formatter={(v: any, name: any) => [
               fmtBRL(v),
               name === "saldo" ? "Saldo devedor" : name === "juros" ? "Juros" : "Amortização",
             ]}

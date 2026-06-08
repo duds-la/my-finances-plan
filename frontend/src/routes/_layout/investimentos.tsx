@@ -57,7 +57,6 @@ function ModalSheet({ onClose, children }: { onClose: () => void; children: Reac
 }
 
 // ── Modal: Novo Investimento ──────────────────────────────────────────────────
-// NOTA: InvestmentCreate NÃO tem campo "nome" — backend não suporta
 
 function NovoInvestimentoModal({ onClose }: { onClose: () => void }) {
   const { data: tipos = [] } = useInvestmentTypes()
@@ -80,17 +79,15 @@ function NovoInvestimentoModal({ onClose }: { onClose: () => void }) {
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm(f => ({ ...f, [k]: e.target.value }))
 
-  // Válido quando tem tipo e valor preenchidos
   const isValid = form.investment_type_id !== "" && form.invested_value.trim() !== ""
 
   const handleSubmit = () => {
-    if (!isValid) return
+    if (!isValid || createMut.isPending) return
     createMut.mutate(
       {
         investment_type_id: Number(form.investment_type_id),
         invested_value:     Number(form.invested_value.replace(",", ".")),
         application_date:   form.application_date,
-        // Divide por 100 para evitar overflow no NUMERIC(5,4)
         interest_rate:      form.interest_rate ? Number(form.interest_rate) / 100 : undefined,
         maturity_date:      form.maturity_date || undefined,
         finalidade:         form.finalidade || undefined,
@@ -111,7 +108,6 @@ function NovoInvestimentoModal({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-        {/* Tipo de investimento */}
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tipo de Investimento *</label>
           <select value={form.investment_type_id} onChange={set("investment_type_id")}
@@ -121,14 +117,12 @@ function NovoInvestimentoModal({ onClose }: { onClose: () => void }) {
           </select>
         </div>
 
-        {/* Valor investido */}
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Valor Investido (R$) *</label>
           <Input type="number" step="0.01" placeholder="0,00"
             value={form.invested_value} onChange={set("invested_value")} className="h-10 text-sm" />
         </div>
 
-        {/* Datas */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Aplicação</label>
@@ -140,14 +134,12 @@ function NovoInvestimentoModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
-        {/* Taxa */}
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Taxa de Juros (% a.a.)</label>
           <Input type="number" step="0.01" placeholder="Ex: 13.5"
             value={form.interest_rate} onChange={set("interest_rate")} className="h-10 text-sm" />
         </div>
 
-        {/* Finalidade */}
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
             <Tag size={11} /> Finalidade
@@ -159,7 +151,6 @@ function NovoInvestimentoModal({ onClose }: { onClose: () => void }) {
           </select>
         </div>
 
-        {/* Meta */}
         {metas.length > 0 && (
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
@@ -213,7 +204,8 @@ function NovoEventoModal({
   const isValid = form.income_value.trim() !== "" && !!income_type_id
 
   const handleSubmit = () => {
-    if (!isValid) return
+    // CORREÇÃO: guard duplo — valida isValid E isPending para evitar submissões múltiplas
+    if (!isValid || createMut.isPending) return
     const raw = Number(form.income_value.replace(",", "."))
     createMut.mutate(
       {
@@ -356,12 +348,12 @@ function PosicaoCard({
             </span>
           </div>
 
-          {/* Valores — usa totalIncome (não totalGains que não existe) */}
+          {/* Valores */}
           <div className="grid grid-cols-3 gap-2 text-center">
             {[
-              { label: "Investido",   value: fmtBRL(inv.totalInvested), color: "text-foreground" },
-              { label: "Atual",       value: fmtBRL(inv.currentValue),  color: "text-foreground" },
-              { label: "Rendimento",  value: fmtBRL(inv.totalIncome),   color: inv.totalIncome >= 0 ? "text-emerald-500" : "text-rose-400" },
+              { label: "Investido",  value: fmtBRL(inv.totalInvested), color: "text-foreground" },
+              { label: "Atual",      value: fmtBRL(inv.currentValue),  color: "text-foreground" },
+              { label: "Rendimento", value: fmtBRL(inv.totalIncome),   color: inv.totalIncome >= 0 ? "text-emerald-500" : "text-rose-400" },
             ].map(({ label, value, color: c }) => (
               <div key={label} className="rounded-lg bg-muted/50 p-2">
                 <p className="text-[10px] text-muted-foreground">{label}</p>
@@ -481,36 +473,42 @@ function InvestimentosPage() {
           {[...Array(3)].map((_, i) => <div key={i} className="h-40 animate-pulse rounded-xl bg-muted" />)}
         </div>
       ) : investments.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center text-sm text-muted-foreground">
-          <TrendingUp size={32} className="mb-3 opacity-20" />
-          Nenhum investimento cadastrado
+        <div className="flex flex-col items-center justify-center h-48 gap-2 text-center rounded-xl border border-dashed border-border">
+          <TrendingUp size={28} className="text-muted-foreground" />
+          <p className="text-sm font-medium">Nenhum investimento</p>
+          <p className="text-xs text-muted-foreground">Clique em "Novo" para adicionar</p>
         </div>
       ) : (
         <>
-          {/* KPIs */}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+          {/* KPI Cards */}
+          <div className="grid grid-cols-3 gap-2">
             {[
-              { icon: DollarSign,   label: "Investido",     value: fmtBRL(totalInvestido),  color: "text-foreground" },
-              { icon: TrendingUp,   label: "Valor Atual",   value: fmtBRL(totalAtual),       color: "text-foreground" },
-              { icon: ArrowUpRight, label: "Rendimentos",   value: fmtBRL(totalRendimentos), color: "text-emerald-500" },
-              { icon: TrendingUp,   label: "Rentabilidade", value: fmtPct(rentGlobal),       color: rentGlobal >= 0 ? "text-emerald-500" : "text-rose-400" },
-            ].map(({ icon: Icon, label, value, color }) => (
-              <div key={label} className="rounded-xl border border-border bg-card p-3">
-                <div className="flex items-center gap-1.5 mb-1">
+              { label: "Investido",   value: fmtBRL(totalInvestido),   icon: DollarSign,  color: "text-foreground" },
+              { label: "Atual",       value: fmtBRL(totalAtual),       icon: TrendingUp,  color: "text-foreground" },
+              { label: "Rendimentos", value: fmtBRL(totalRendimentos), icon: TrendingUp,  color: totalRendimentos >= 0 ? "text-emerald-500" : "text-rose-400" },
+            ].map(({ label, value, icon: Icon, color }) => (
+              <div key={label} className="rounded-xl border border-border bg-card p-3 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{label}</p>
                   <Icon size={12} className="text-muted-foreground" />
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</p>
                 </div>
-                <p className={cn("text-sm font-bold", color)}>{value}</p>
+                <p className={cn("text-sm font-semibold", color)}>{value}</p>
               </div>
             ))}
           </div>
 
-          {/* Gráfico */}
+          {/* Rentabilidade global */}
+          <div className="rounded-xl border border-border bg-card px-4 py-3 flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Rentabilidade global</p>
+            <p className={cn("text-sm font-semibold", rentGlobal >= 0 ? "text-emerald-500" : "text-rose-400")}>
+              {rentGlobal >= 0 ? "+" : ""}{fmtPct(rentGlobal)}
+            </p>
+          </div>
+
+          {/* Gráfico de composição */}
           {pieData.length > 0 && (
             <div className="rounded-xl border border-border bg-card p-4">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-                Composição por Finalidade
-              </p>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Composição por Finalidade</p>
               <div className="flex items-center gap-4">
                 <div className="h-28 w-28 shrink-0">
                   <ResponsiveContainer width="100%" height="100%">

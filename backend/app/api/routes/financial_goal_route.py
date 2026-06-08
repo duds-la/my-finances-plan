@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List
 
 from app.database.session import get_db
 from app.api.deps import get_current_user
 from app.models.user import User
+from app.models.goal_contribution import Goal_Contribution
 from app.schemas.financial_goal_schema import (
     Financial_Goal_Schema_Create,
     Financial_Goal_Schema_Update,
@@ -24,7 +25,6 @@ def create(
 ):
     payload = data.model_dump()
     payload["user_id"] = current_user.id
-
     return repository.create(db, payload)
 
 
@@ -52,13 +52,11 @@ def get_by_id(
     current_user: User = Depends(get_current_user),
 ):
     obj = repository.get_by_id_and_user(db, id, current_user.id)
-
     if not obj:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Financial Goal with id {id} not found"
+            detail=f"Financial Goal with id {id} not found",
         )
-
     return obj
 
 
@@ -70,11 +68,10 @@ def update(
     current_user: User = Depends(get_current_user),
 ):
     obj = repository.get_by_id_and_user(db, id, current_user.id)
-
     if not obj:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Financial Goal with id {id} not found"
+            detail=f"Financial Goal with id {id} not found",
         )
 
     update_data = data.model_dump(exclude_unset=True)
@@ -88,11 +85,15 @@ def delete(
     current_user: User = Depends(get_current_user),
 ):
     obj = repository.get_by_id_and_user(db, id, current_user.id)
-
     if not obj:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Financial Goal with id {id} not found"
+            detail=f"Financial Goal with id {id} not found",
         )
+
+    # Remove contribuições vinculadas antes de excluir a meta
+    # (FK não tem ON DELETE CASCADE)
+    db.query(Goal_Contribution).filter(Goal_Contribution.goal_id == id).delete()
+    db.flush()
 
     repository.delete(db, obj)

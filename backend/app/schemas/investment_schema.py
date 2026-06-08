@@ -12,6 +12,8 @@ class Investment_Schema_Base(BaseModel):
     maturity_date: Optional[date] = None
     application_date: date
     status: str = "ativo"
+    finalidade: Optional[str] = None
+    goal_id: Optional[int] = None
 
 
 class Investment_Schema_Create(Investment_Schema_Base):
@@ -26,11 +28,14 @@ class Investment_Schema_Update(BaseModel):
     maturity_date: Optional[date] = None
     application_date: Optional[date] = None
     status: Optional[str] = None
+    finalidade: Optional[str] = None
+    goal_id: Optional[int] = None
 
 
 class Investment_Schema_Response(Investment_Schema_Base):
     id: int
     user_id: int
+    current_value: Optional[Decimal] = None   # calculado pelo backend
 
     class Config:
         from_attributes = True

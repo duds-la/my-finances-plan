@@ -8,6 +8,7 @@ from app.models.user import User
 from app.models.investment import Investment
 from app.models.income import Income
 from app.models.income_type import Income_Type
+from app.models.financial_goal import Financial_Goal
 from app.schemas.income_schema import (
     Income_Schema_Create,
     Income_Schema_Update,
@@ -47,6 +48,17 @@ def _recalculate_current_value(db: Session, investment: Investment) -> None:
     investment.current_value = base + aportes + rendimentos - resgates
     db.flush()
 
+    # ── Sincroniza a meta vinculada a este investimento ────────────────────
+    meta = db.query(Financial_Goal).filter(
+        Financial_Goal.investment_id == investment.id
+    ).first()
+    if meta:
+        meta.current_value = investment.current_value
+        # Marca como concluída se atingiu o alvo
+        if float(meta.target_value or 0) > 0 and investment.current_value >= float(meta.target_value):
+            meta.status = "concluida"
+        db.flush()
+
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
@@ -66,7 +78,7 @@ def create(
 
     income = repository.create(db, data.model_dump())
 
-    # Recalcula current_value do investimento
+    # Recalcula current_value do investimento (e sincroniza meta vinculada)
     _recalculate_current_value(db, inv)
     db.commit()
     db.refresh(income)

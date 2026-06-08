@@ -11,13 +11,13 @@ export interface Investment {
   user_id: number
   investment_type_id: number
   invested_value: number
-  current_value: number        // calculado pelo backend
+  current_value: number
   interest_rate?: number
   maturity_date?: string
   application_date: string
   status: string
   transaction_id?: number
-  finalidade?: string          // 'R.E' | 'Carro' | 'Apartamento' | null
+  finalidade?: string
   goal_id?: number
 }
 
@@ -76,11 +76,10 @@ export interface InvestmentEnriched extends Investment {
   typeName: string
   typeAcronym: string
   isFixedIncome: boolean
-  // Valores calculados a partir do current_value do backend
-  currentValue: number     // = current_value do backend
-  totalInvested: number    // = invested_value (principal puro)
-  totalIncome: number      // = currentValue - totalInvested (rendimentos líquidos)
-  rentabilidadePct: number // % de retorno sobre o principal
+  currentValue: number      // = current_value do backend (investido + aportes + rendimentos - resgates)
+  totalInvested: number     // = invested_value original + aportes adicionais (principal real)
+  totalIncome: number       // = apenas rendimentos (juros/dividendos)
+  rentabilidadePct: number  // % sobre o principal real
 }
 
 // ── Query keys ────────────────────────────────────────────────────────────────
@@ -110,7 +109,12 @@ export function useInvestments() {
   const typeMap       = Object.fromEntries(types.map(t => [t.id, t]))
   const incomeTypeMap = Object.fromEntries(incomeTypes.map(t => [t.id, t]))
 
-  // Agrupa events por investimento
+  // Classifica income_type_ids por categoria
+  const aportIds = new Set(incomeTypes.filter(t => t.description.toLowerCase().includes("aporte")).map(t => t.id))
+  const rendIds  = new Set(incomeTypes.filter(t => t.description.toLowerCase().includes("rendimento")).map(t => t.id))
+  const resgIds  = new Set(incomeTypes.filter(t => t.description.toLowerCase().includes("resgate")).map(t => t.id))
+
+  // Agrupa incomes por investimento
   const eventsByInv: Record<number, Income[]> = {}
   for (const inc of incomes) {
     eventsByInv[inc.investment_id] = [...(eventsByInv[inc.investment_id] ?? []), inc]
@@ -119,10 +123,25 @@ export function useInvestments() {
   const enriched: InvestmentEnriched[] = investments.map(inv => {
     const type         = typeMap[inv.investment_type_id]
     const currentValue = Number(inv.current_value ?? inv.invested_value)
-    const totalInvested = Number(inv.invested_value)
-    const totalIncome   = currentValue - totalInvested
+    const invIncomes   = eventsByInv[inv.id] ?? []
+
+    // Principal real = invested_value inicial + aportes adicionais - resgates
+    const aportesAdicionais = invIncomes
+      .filter(i => aportIds.has(i.income_type_id))
+      .reduce((s, i) => s + Number(i.income_value), 0)
+    const resgates = invIncomes
+      .filter(i => resgIds.has(i.income_type_id))
+      .reduce((s, i) => s + Math.abs(Number(i.income_value)), 0)
+
+    const totalInvested = Number(inv.invested_value) + aportesAdicionais - resgates
+
+    // Rendimentos = apenas juros/dividendos, não aportes
+    const totalIncome = invIncomes
+      .filter(i => rendIds.has(i.income_type_id))
+      .reduce((s, i) => s + Number(i.income_value), 0)
+
     const rentabilidadePct = totalInvested > 0
-      ? ((totalIncome) / totalInvested) * 100
+      ? (totalIncome / totalInvested) * 100
       : 0
 
     return {
@@ -141,7 +160,6 @@ export function useInvestments() {
   const totalAtual       = enriched.reduce((s, i) => s + i.currentValue, 0)
   const totalRendimentos = enriched.reduce((s, i) => s + i.totalIncome, 0)
 
-  // Composição por finalidade (para gráfico)
   const composicaoPorFinalidade = enriched
     .filter(i => i.status === "ativo")
     .reduce<Record<string, number>>((acc, i) => {
@@ -150,7 +168,6 @@ export function useInvestments() {
       return acc
     }, {})
 
-  // Composição por tipo de investimento (para portfolio.tsx)
   const composicaoPorTipoMap = enriched
     .filter(i => i.status === "ativo")
     .reduce<Record<string, number>>((acc, i) => {
@@ -223,7 +240,7 @@ export function useCreateIncome() {
     mutationFn: (data: IncomeCreate) => api.post(`${BASE}/income/`, data).then(r => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: invKeys.incomes })
-      qc.invalidateQueries({ queryKey: invKeys.all })   // atualiza current_value
+      qc.invalidateQueries({ queryKey: invKeys.all })
     },
   })
 }

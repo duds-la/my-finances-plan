@@ -77,15 +77,16 @@ def create(
     current_user: User = Depends(get_current_user),
 ):
     payload = data.model_dump()
+    goal_id = payload.pop("goal_id", None)  # ← extrai antes de passar ao model
     payload["user_id"] = current_user.id
     payload["current_value"] = payload.get("invested_value", 0)
 
     inv = repository.create(db, payload)
 
     # Liga à meta se informado
-    if payload.get("goal_id"):
+    if goal_id:
         meta = db.query(Financial_Goal).filter(
-            Financial_Goal.id == payload["goal_id"],
+            Financial_Goal.id == goal_id,
             Financial_Goal.user_id == current_user.id
         ).first()
         if meta:

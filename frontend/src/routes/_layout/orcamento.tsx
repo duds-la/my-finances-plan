@@ -545,7 +545,7 @@ function OrcamentoPage() {
                     {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                   </Pie>
                   <Tooltip
-                    formatter={(v: number) => fmtBRL(v)}
+                    formatter={(v: any) => fmtBRL(Number(v ?? 0))}
                     contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
                   />
                 </PieChart>
