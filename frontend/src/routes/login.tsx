@@ -493,8 +493,8 @@ function Login() {
                               placeholder="••••••••"
                               className="input-finance h-11 rounded-lg text-sm"
                               onFocus={() => setFocused("password")}
-                              onBlur={() => { setFocused(null); field.onBlur() }}
                               {...field}
+                              onBlur={() => { setFocused(null); field.onBlur() }}
                             />
                           </FormControl>
                           <FormMessage className="text-xs" style={{ color: "#f87171" }} />

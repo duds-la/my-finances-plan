@@ -1194,7 +1194,7 @@ function ChartFIRE({ result, cor }: { result: Record<string, unknown>; cor: stri
   )
 }
 
-function ChartInflacao({ result, params, cor }: {
+function ChartInflacao({ result, cor }: {
   result: Record<string, unknown>
   params: Record<string, unknown>
   cor: string
