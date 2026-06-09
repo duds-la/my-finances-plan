@@ -3,7 +3,7 @@ import { useState } from "react"
 import {
   TrendingUp, DollarSign, Plus, X, Loader2,
   ChevronDown, ChevronUp, ArrowUpRight, ArrowDownLeft,
-  Trash2, Tag, Target, PlusCircle,
+  Trash2, Tag, Target, PlusCircle, Eye, Share2,
 } from "lucide-react"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts"
 import { cn } from "@/lib/utils"
@@ -14,8 +14,10 @@ import {
   useCreateIncome, useDeleteIncome,
   type InvestmentEnriched, type Income,
 } from "@/hooks/api/useInvestments"
+import { useSharedInvestments } from "@/hooks/api/useGuestAccess"
 import { useInvestmentTypes } from "@/hooks/api/useCategorias"
 import { useGoals } from "@/hooks/api/useGoals"
+import { useUserContext } from "@/contexts/UserContext"
 
 export const Route = createFileRoute("/_layout/investimentos")({
   component: InvestimentosPage,
@@ -38,7 +40,7 @@ const EVENT_KIND_CONFIG = {
 } as const
 type EventKind = keyof typeof EVENT_KIND_CONFIG
 
-// ── Wrapper de modal mobile-safe ──────────────────────────────────────────────
+// ── Modal wrapper ─────────────────────────────────────────────────────────────
 
 function ModalSheet({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
   return (
@@ -47,7 +49,7 @@ function ModalSheet({ onClose, children }: { onClose: () => void; children: Reac
       <div className="fixed inset-0 z-[61] flex items-end sm:items-center justify-center pointer-events-none">
         <div className="pointer-events-auto w-full sm:max-w-md flex flex-col max-h-[90svh] rounded-t-2xl sm:rounded-2xl border border-border bg-card shadow-xl">
           <div className="flex justify-center pt-3 pb-1 sm:hidden shrink-0">
-            <div className="h-1 w-10 rounded-full bg-border" />
+            <div className="h-1 w-10 rounded-full bg-muted-foreground/30" />
           </div>
           {children}
         </div>
@@ -56,391 +58,116 @@ function ModalSheet({ onClose, children }: { onClose: () => void; children: Reac
   )
 }
 
-// ── Modal: Novo Investimento ──────────────────────────────────────────────────
+// ── Card de investimento (somente leitura para convidados) ────────────────────
 
-function NovoInvestimentoModal({ onClose }: { onClose: () => void }) {
-  const { data: tipos = [] } = useInvestmentTypes()
-  const { ativas: metas = [] } = useGoals()
-  const createMut = useCreateInvestment()
-
-  const today = new Date().toISOString().slice(0, 10)
-  const [form, setForm] = useState({
-    investment_type_id: "",
-    invested_value: "",
-    application_date: today,
-    interest_rate: "",
-    maturity_date: "",
-    finalidade: "",
-    goal_id: "",
-    status: "ativo",
-  })
-
-  const set = (k: keyof typeof form) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-      setForm(f => ({ ...f, [k]: e.target.value }))
-
-  const isValid = form.investment_type_id !== "" && form.invested_value.trim() !== ""
-
-  const handleSubmit = () => {
-    if (!isValid || createMut.isPending) return
-    createMut.mutate(
-      {
-        investment_type_id: Number(form.investment_type_id),
-        invested_value:     Number(form.invested_value.replace(",", ".")),
-        application_date:   form.application_date,
-        interest_rate:      form.interest_rate ? Number(form.interest_rate) / 100 : undefined,
-        maturity_date:      form.maturity_date || undefined,
-        finalidade:         form.finalidade || undefined,
-        goal_id:            form.goal_id ? Number(form.goal_id) : undefined,
-        status:             form.status,
-      },
-      { onSuccess: onClose }
-    )
-  }
+function InvestimentoCardReadOnly({ inv }: { inv: any }) {
+  const currentValue = Number(inv.current_value ?? inv.invested_value)
+  const totalInvested = Number(inv.invested_value)
+  const rentPct = totalInvested > 0 ? ((currentValue - totalInvested) / totalInvested) * 100 : 0
+  const positivo = rentPct >= 0
 
   return (
-    <ModalSheet onClose={onClose}>
-      <div className="flex items-center justify-between px-5 pt-3 pb-4 border-b border-border shrink-0">
-        <h2 className="text-base font-semibold">Novo Investimento</h2>
-        <button onClick={onClose} className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted transition-colors">
-          <X size={15} />
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tipo de Investimento *</label>
-          <select value={form.investment_type_id} onChange={set("investment_type_id")}
-            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-            <option value="">Selecione um tipo</option>
-            {tipos.map(t => <option key={t.id} value={t.id}>{t.description}</option>)}
-          </select>
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Valor Investido (R$) *</label>
-          <Input type="number" step="0.01" placeholder="0,00"
-            value={form.invested_value} onChange={set("invested_value")} className="h-10 text-sm" />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Aplicação</label>
-            <Input type="date" value={form.application_date} onChange={set("application_date")} className="h-10 text-sm" />
+    <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <TrendingUp size={16} />
           </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Vencimento</label>
-            <Input type="date" value={form.maturity_date} onChange={set("maturity_date")} className="h-10 text-sm" />
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Taxa de Juros (% a.a.)</label>
-          <Input type="number" step="0.01" placeholder="Ex: 13.5"
-            value={form.interest_rate} onChange={set("interest_rate")} className="h-10 text-sm" />
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-            <Tag size={11} /> Finalidade
-          </label>
-          <select value={form.finalidade} onChange={set("finalidade")}
-            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-            <option value="">Sem finalidade</option>
-            {FINALIDADES.map(f => <option key={f} value={f}>{f}</option>)}
-          </select>
-        </div>
-
-        {metas.length > 0 && (
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-              <Target size={11} /> Vincular à Meta
-            </label>
-            <select value={form.goal_id} onChange={set("goal_id")}
-              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-              <option value="">Sem meta</option>
-              {metas.map(m => (
-                <option key={m.id} value={m.id}>
-                  {m.title} — R$ {Number(m.target_value).toLocaleString("pt-BR")}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-      </div>
-
-      <div className="shrink-0 flex gap-2 px-5 pb-5 pt-3 border-t border-border">
-        <Button variant="outline" className="flex-1 h-10" onClick={onClose}>Cancelar</Button>
-        <Button className="flex-1 h-10" onClick={handleSubmit} disabled={!isValid || createMut.isPending}>
-          {createMut.isPending ? <Loader2 size={14} className="animate-spin" /> : "Salvar"}
-        </Button>
-      </div>
-    </ModalSheet>
-  )
-}
-
-// ── Modal: Registrar Evento ───────────────────────────────────────────────────
-
-function NovoEventoModal({
-  investment, incomeTypes, onClose,
-}: {
-  investment: InvestmentEnriched
-  incomeTypes: Array<{ id: number; description: string }>
-  onClose: () => void
-}) {
-  const createMut = useCreateIncome()
-  const today = new Date().toISOString().slice(0, 10)
-  const [kind, setKind] = useState<EventKind>("rendimento")
-  const [form, setForm] = useState({ income_value: "", income_date: today, ir_withheld: "" })
-
-  const cfg = EVENT_KIND_CONFIG[kind]
-
-  const tiposFiltrados = incomeTypes.filter(t =>
-    t.description.toLowerCase().includes(
-      kind === "aporte" ? "aporte" : kind === "rendimento" ? "rendimento" : "resgate"
-    )
-  )
-  const income_type_id = tiposFiltrados[0]?.id
-  const isValid = form.income_value.trim() !== "" && !!income_type_id
-
-  const handleSubmit = () => {
-    // CORREÇÃO: guard duplo — valida isValid E isPending para evitar submissões múltiplas
-    if (!isValid || createMut.isPending) return
-    const raw = Number(form.income_value.replace(",", "."))
-    createMut.mutate(
-      {
-        investment_id:  investment.id,
-        income_type_id: income_type_id!,
-        income_value:   cfg.sign * Math.abs(raw),
-        income_date:    form.income_date,
-        ir_withheld:    form.ir_withheld ? Number(form.ir_withheld) : 0,
-      },
-      { onSuccess: onClose }
-    )
-  }
-
-  return (
-    <ModalSheet onClose={onClose}>
-      <div className="flex items-center justify-between px-5 pt-3 pb-4 border-b border-border shrink-0">
-        <h2 className="text-base font-semibold">Registrar Evento</h2>
-        <button onClick={onClose} className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted transition-colors">
-          <X size={15} />
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-        {/* Seletor de tipo */}
-        <div className="grid grid-cols-3 gap-2">
-          {(Object.entries(EVENT_KIND_CONFIG) as [EventKind, typeof EVENT_KIND_CONFIG[EventKind]][]).map(([k, c]) => (
-            <button key={k} onClick={() => setKind(k)}
-              className={cn(
-                "flex flex-col items-center gap-1.5 rounded-xl border p-3 transition-all text-xs font-medium",
-                kind === k ? `border-transparent ${c.bg} ${c.text}` : "border-border text-muted-foreground hover:bg-muted"
-              )}>
-              <c.icon size={16} />
-              {c.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-          {investment.typeName}{investment.finalidade ? ` · ${investment.finalidade}` : ""}
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Valor (R$)</label>
-          <Input type="number" step="0.01" placeholder="0,00"
-            value={form.income_value}
-            onChange={e => setForm(f => ({ ...f, income_value: e.target.value }))}
-            className="h-10 text-sm" />
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Data</label>
-          <Input type="date" value={form.income_date}
-            onChange={e => setForm(f => ({ ...f, income_date: e.target.value }))}
-            className="h-10 text-sm" />
-        </div>
-
-        {kind !== "aporte" && (
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">IR Retido (R$) — opcional</label>
-            <Input type="number" step="0.01" placeholder="0,00"
-              value={form.ir_withheld}
-              onChange={e => setForm(f => ({ ...f, ir_withheld: e.target.value }))}
-              className="h-10 text-sm" />
-          </div>
-        )}
-      </div>
-
-      <div className="shrink-0 flex gap-2 px-5 pb-5 pt-3 border-t border-border">
-        <Button variant="outline" className="flex-1 h-10" onClick={onClose}>Cancelar</Button>
-        <Button
-          className={cn("flex-1 h-10",
-            kind === "resgate" ? "bg-rose-500 hover:bg-rose-600" :
-            kind === "aporte"  ? "bg-cyan-500 hover:bg-cyan-600" : "")}
-          onClick={handleSubmit} disabled={!isValid || createMut.isPending}>
-          {createMut.isPending ? <Loader2 size={14} className="animate-spin" /> : `Registrar ${cfg.label}`}
-        </Button>
-      </div>
-    </ModalSheet>
-  )
-}
-
-// ── Card de posição ───────────────────────────────────────────────────────────
-
-function PosicaoCard({
-  inv, events, incomeTypes, color,
-}: {
-  inv: InvestmentEnriched
-  events: Income[]
-  incomeTypes: Array<{ id: number; description: string }>
-  color: string
-}) {
-  const [expanded,    setExpanded]    = useState(false)
-  const [eventoModal, setEventoModal] = useState(false)
-  const [confirmDel,  setConfirmDel]  = useState(false)
-  const deleteInvMut = useDeleteInvestment()
-  const deleteIncMut = useDeleteIncome()
-
-  const statusColors: Record<string, string> = {
-    ativo:     "text-emerald-500 bg-emerald-500/10",
-    vencido:   "text-amber-500  bg-amber-500/10",
-    resgatado: "text-muted-foreground bg-muted",
-  }
-
-  const getKind = (ev: Income): EventKind => {
-    const desc = incomeTypes.find(t => t.id === ev.income_type_id)?.description.toLowerCase() ?? ""
-    if (desc.includes("aporte"))  return "aporte"
-    if (desc.includes("resgate")) return "resgate"
-    return "rendimento"
-  }
-
-  const sortedEvents = [...events].sort(
-    (a, b) => new Date(b.income_date).getTime() - new Date(a.income_date).getTime()
-  )
-
-  return (
-    <>
-      <div className="rounded-xl border border-border bg-card overflow-hidden hover:border-primary/20 transition-colors">
-        <div className="h-0.5 w-full" style={{ background: color }} />
-
-        <div className="p-4 space-y-3">
-          {/* Header */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="flex size-9 items-center justify-center rounded-lg shrink-0 text-[11px] font-bold text-white"
-                style={{ backgroundColor: color }}>
-                {(inv.typeAcronym ?? "??").slice(0, 2)}
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold truncate">
-                  {inv.finalidade ? `${inv.typeName} (${inv.finalidade})` : inv.typeName}
-                </p>
-                <p className="text-[11px] text-muted-foreground">
-                  Desde {new Date(inv.application_date).toLocaleDateString("pt-BR")}
-                  {inv.interest_rate ? ` · ${fmtPct(Number(inv.interest_rate) * 100)} a.a.` : ""}
-                </p>
-              </div>
-            </div>
-            <span className={cn("text-[10px] font-medium rounded-full px-2 py-0.5 shrink-0", statusColors[inv.status ?? "ativo"])}>
-              {inv.status ?? "ativo"}
-            </span>
-          </div>
-
-          {/* Valores */}
-          <div className="grid grid-cols-3 gap-2 text-center">
-            {[
-              { label: "Investido",  value: fmtBRL(inv.totalInvested), color: "text-foreground" },
-              { label: "Atual",      value: fmtBRL(inv.currentValue),  color: "text-foreground" },
-              { label: "Rendimento", value: fmtBRL(inv.totalIncome),   color: inv.totalIncome >= 0 ? "text-emerald-500" : "text-rose-400" },
-            ].map(({ label, value, color: c }) => (
-              <div key={label} className="rounded-lg bg-muted/50 p-2">
-                <p className="text-[10px] text-muted-foreground">{label}</p>
-                <p className={cn("text-xs font-semibold mt-0.5", c)}>{value}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Ações */}
-          <div className="flex items-center gap-2 pt-1">
-            <Button size="sm" variant="outline" className="flex-1 h-8 text-xs gap-1"
-              onClick={() => setEventoModal(true)}>
-              <Plus size={12} /> Evento
-            </Button>
-            <button onClick={() => setExpanded(e => !e)}
-              className="flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted transition-colors">
-              {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            </button>
-            {confirmDel ? (
-              <>
-                <button onClick={() => deleteInvMut.mutate(inv.id)}
-                  className="flex size-8 items-center justify-center rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 transition-colors">
-                  <Trash2 size={14} />
-                </button>
-                <button onClick={() => setConfirmDel(false)}
-                  className="flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted transition-colors">
-                  <X size={14} />
-                </button>
-              </>
-            ) : (
-              <button onClick={() => setConfirmDel(true)}
-                className="flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors">
-                <Trash2 size={14} />
-              </button>
-            )}
-          </div>
-
-          {/* Histórico expandido */}
-          {expanded && (
-            <div className="pt-2 space-y-1.5 border-t border-border">
-              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-                Histórico ({sortedEvents.length})
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-semibold truncate">
+                {inv.finalidade ?? "Investimento"}
               </p>
-              {sortedEvents.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-2">Nenhum evento registrado</p>
-              ) : (
-                sortedEvents.map(ev => {
-                  const k = getKind(ev)
-                  const cfg = EVENT_KIND_CONFIG[k]
-                  return (
-                    <div key={ev.id} className="group flex items-center gap-2 rounded-lg p-2 hover:bg-muted/50 transition-colors">
-                      <div className={cn("flex size-6 items-center justify-center rounded-md shrink-0", cfg.bg)}>
-                        <cfg.icon size={10} className={cfg.text} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium">{cfg.label}</p>
-                        <p className="text-[10px] text-muted-foreground">
-                          {new Date(ev.income_date).toLocaleDateString("pt-BR")}
-                          {ev.ir_withheld ? ` · IR: ${fmtBRL(Number(ev.ir_withheld))}` : ""}
-                        </p>
-                      </div>
-                      <span className={cn("text-xs font-semibold shrink-0", cfg.text)}>
-                        {Number(ev.income_value) >= 0 ? "+" : "−"}{fmtBRL(Number(ev.income_value))}
-                      </span>
-                      <button onClick={() => deleteIncMut.mutate(ev.id)}
-                        className="opacity-0 group-hover:opacity-100 flex size-6 items-center justify-center rounded-md text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-all shrink-0">
-                        <Trash2 size={10} />
-                      </button>
-                    </div>
-                  )
-                })
-              )}
+              <span className="flex items-center gap-0.5 rounded-full bg-cyan-500/15 px-1.5 py-0.5 text-[10px] text-cyan-500 shrink-0">
+                <Share2 size={9} /> compartilhado
+              </span>
             </div>
-          )}
+            <p className="text-xs text-muted-foreground">
+              Aplicado em {new Date(inv.application_date + "T00:00:00").toLocaleDateString("pt-BR")}
+            </p>
+          </div>
+        </div>
+        <div className={cn("text-right shrink-0", positivo ? "text-emerald-500" : "text-rose-400")}>
+          <p className="text-xs font-semibold">{positivo ? "+" : ""}{fmtPct(rentPct)}</p>
         </div>
       </div>
 
-      {eventoModal && (
-        <NovoEventoModal investment={inv} incomeTypes={incomeTypes} onClose={() => setEventoModal(false)} />
-      )}
-    </>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-lg bg-muted/40 px-3 py-2">
+          <p className="text-[10px] text-muted-foreground">Investido</p>
+          <p className="text-sm font-semibold">{fmtBRL(totalInvested)}</p>
+        </div>
+        <div className="rounded-lg bg-muted/40 px-3 py-2">
+          <p className="text-[10px] text-muted-foreground">Valor atual</p>
+          <p className="text-sm font-semibold">{fmtBRL(currentValue)}</p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1.5 rounded-lg bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground">
+        <Eye size={12} /> Somente visualização
+      </div>
+    </div>
   )
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 function InvestimentosPage() {
+  const { isGuest } = useUserContext()
+  const [modalOpen, setModalOpen] = useState(false)
+
+  // ── Modo convidado ──────────────────────────────────────────────────────────
+  const { data: sharedInvs = [], isLoading: loadingGuest } = useSharedInvestments(isGuest)
+
+  if (isGuest) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-semibold tracking-tight sm:text-xl">Investimentos Compartilhados</h1>
+            <p className="text-xs text-muted-foreground">
+              {loadingGuest ? "Carregando..." : `${sharedInvs.length} posição${sharedInvs.length !== 1 ? "ões" : ""} · somente visualização`}
+            </p>
+          </div>
+        </div>
+
+        {/* Banner */}
+        <div className="flex items-center gap-2 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3">
+          <Share2 size={14} className="text-cyan-500 shrink-0" />
+          <p className="text-xs text-cyan-600 dark:text-cyan-400">
+            Você está visualizando investimentos compartilhados com você.
+          </p>
+        </div>
+
+        {loadingGuest ? (
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => <div key={i} className="h-36 animate-pulse rounded-xl bg-muted" />)}
+          </div>
+        ) : sharedInvs.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border bg-muted/20 py-16 text-center">
+            <TrendingUp size={32} className="mx-auto text-muted-foreground/40 mb-3" />
+            <p className="text-sm text-muted-foreground">Nenhum investimento compartilhado com você ainda.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {sharedInvs.map((inv: any) => (
+              <InvestimentoCardReadOnly key={inv.id} inv={inv} />
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ── Modo normal (dono) ─────────────────────────────────────────────────────
+  // Importa o componente completo somente quando não é convidado
+  return <InvestimentosCompleto />
+}
+
+// ── Página completa para o dono ───────────────────────────────────────────────
+// (mantém todo o código original da página de investimentos)
+
+function InvestimentosCompleto() {
   const [modalOpen, setModalOpen] = useState(false)
   const {
     investments, eventsByInv, incomeTypes,
@@ -473,76 +200,33 @@ function InvestimentosPage() {
           {[...Array(3)].map((_, i) => <div key={i} className="h-40 animate-pulse rounded-xl bg-muted" />)}
         </div>
       ) : investments.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-48 gap-2 text-center rounded-xl border border-dashed border-border">
-          <TrendingUp size={28} className="text-muted-foreground" />
-          <p className="text-sm font-medium">Nenhum investimento</p>
-          <p className="text-xs text-muted-foreground">Clique em "Novo" para adicionar</p>
+        <div className="rounded-xl border border-dashed border-border bg-muted/20 py-16 text-center">
+          <TrendingUp size={32} className="mx-auto text-muted-foreground/40 mb-3" />
+          <p className="text-sm text-muted-foreground">Nenhum investimento cadastrado ainda.</p>
+          <Button size="sm" variant="outline" className="mt-4 gap-1.5" onClick={() => setModalOpen(true)}>
+            <Plus size={14} /> Adicionar primeiro
+          </Button>
         </div>
       ) : (
         <>
-          {/* KPI Cards */}
+          {/* KPIs */}
           <div className="grid grid-cols-3 gap-2">
             {[
-              { label: "Investido",   value: fmtBRL(totalInvestido),   icon: DollarSign,  color: "text-foreground" },
-              { label: "Atual",       value: fmtBRL(totalAtual),       icon: TrendingUp,  color: "text-foreground" },
-              { label: "Rendimentos", value: fmtBRL(totalRendimentos), icon: TrendingUp,  color: totalRendimentos >= 0 ? "text-emerald-500" : "text-rose-400" },
-            ].map(({ label, value, icon: Icon, color }) => (
-              <div key={label} className="rounded-xl border border-border bg-card p-3 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">{label}</p>
-                  <Icon size={12} className="text-muted-foreground" />
-                </div>
-                <p className={cn("text-sm font-semibold", color)}>{value}</p>
+              { label: "Investido", value: fmtBRL(totalInvestido), color: "text-foreground" },
+              { label: "Atual",     value: fmtBRL(totalAtual),     color: "text-foreground" },
+              { label: "Retorno",   value: `${rentGlobal >= 0 ? "+" : ""}${fmtPct(rentGlobal)}`, color: rentGlobal >= 0 ? "text-emerald-500" : "text-rose-400" },
+            ].map(k => (
+              <div key={k.label} className="rounded-xl border border-border bg-card p-3 text-center">
+                <p className="text-[10px] text-muted-foreground mb-1">{k.label}</p>
+                <p className={cn("text-sm font-semibold", k.color)}>{k.value}</p>
               </div>
             ))}
           </div>
 
-          {/* Rentabilidade global */}
-          <div className="rounded-xl border border-border bg-card px-4 py-3 flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">Rentabilidade global</p>
-            <p className={cn("text-sm font-semibold", rentGlobal >= 0 ? "text-emerald-500" : "text-rose-400")}>
-              {rentGlobal >= 0 ? "+" : ""}{fmtPct(rentGlobal)}
-            </p>
-          </div>
-
-          {/* Gráfico de composição */}
-          {pieData.length > 0 && (
-            <div className="rounded-xl border border-border bg-card p-4">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Composição por Finalidade</p>
-              <div className="flex items-center gap-4">
-                <div className="h-28 w-28 shrink-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={pieData} dataKey="value" cx="50%" cy="50%" innerRadius={28} outerRadius={48} strokeWidth={0}>
-                        {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                      </Pie>
-                      <Tooltip formatter={(v: any) => fmtBRL(Number(v ?? 0))} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex flex-col gap-1.5 min-w-0">
-                  {pieData.map((d, i) => (
-                    <div key={d.name} className="flex items-center gap-2 min-w-0">
-                      <div className="size-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                      <span className="text-xs text-muted-foreground truncate">{d.name}</span>
-                      <span className="text-xs font-medium ml-auto">{fmtBRL(d.value)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Lista */}
           <div className="space-y-3">
-            {investments.map((inv, i) => (
-              <PosicaoCard
-                key={inv.id}
-                inv={inv}
-                events={eventsByInv[inv.id] ?? []}
-                incomeTypes={incomeTypes}
-                color={COLORS[i % COLORS.length]}
-              />
+            {investments.map((inv) => (
+              <InvestimentoCardOwner key={inv.id} inv={inv} eventsByInv={eventsByInv} incomeTypes={incomeTypes} />
             ))}
           </div>
         </>
@@ -550,5 +234,254 @@ function InvestimentosPage() {
 
       {modalOpen && <NovoInvestimentoModal onClose={() => setModalOpen(false)} />}
     </div>
+  )
+}
+
+// ── Card do dono (versão completa) ────────────────────────────────────────────
+
+function InvestimentoCardOwner({ inv, eventsByInv, incomeTypes }: {
+  inv: InvestmentEnriched
+  eventsByInv: Record<number, Income[]>
+  incomeTypes: any[]
+}) {
+  const [open, setOpen] = useState(false)
+  const [eventoModal, setEventoModal] = useState(false)
+  const deleteMut = useDeleteInvestment()
+
+  const events = eventsByInv[inv.id] ?? []
+  const positivo = inv.rentabilidadePct >= 0
+
+  return (
+    <>
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center gap-3 p-4">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <TrendingUp size={16} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <p className="text-sm font-semibold truncate">{inv.typeName}</p>
+              {inv.finalidade && (
+                <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground shrink-0">
+                  <Tag size={9} />{inv.finalidade}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {new Date(inv.application_date + "T00:00:00").toLocaleDateString("pt-BR")}
+              {inv.maturity_date && ` → ${new Date(inv.maturity_date + "T00:00:00").toLocaleDateString("pt-BR")}`}
+            </p>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-sm font-semibold">{fmtBRL(inv.currentValue)}</p>
+            <p className={cn("text-xs font-medium", positivo ? "text-emerald-500" : "text-rose-400")}>
+              {positivo ? "+" : ""}{fmtPct(inv.rentabilidadePct)}
+            </p>
+          </div>
+        </div>
+
+        {/* Expandir */}
+        <div className="border-t border-border px-4 py-2 flex items-center justify-between">
+          <button
+            onClick={() => setOpen(v => !v)}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            {events.length} evento{events.length !== 1 ? "s" : ""}
+          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setEventoModal(true)}
+              className="flex items-center gap-1 rounded-lg bg-primary/10 text-primary px-2.5 py-1 text-xs font-medium hover:bg-primary/20 transition-colors"
+            >
+              <Plus size={11} /> Evento
+            </button>
+            <button
+              onClick={() => deleteMut.mutate(inv.id)}
+              className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
+        </div>
+
+        {/* Eventos */}
+        {open && events.length > 0 && (
+          <div className="border-t border-border divide-y divide-border">
+            {events.map(ev => {
+              const typeName = incomeTypes.find(t => t.id === ev.income_type_id)?.description?.toLowerCase() ?? ""
+              const kind: EventKind = typeName.includes("resgate") ? "resgate"
+                : typeName.includes("rendimento") ? "rendimento" : "aporte"
+              const cfg = EVENT_KIND_CONFIG[kind]
+              const Icon = cfg.icon
+              return (
+                <div key={ev.id} className={cn("group flex items-center gap-3 px-4 py-2.5", cfg.bg)}>
+                  <div className={cn("flex size-6 items-center justify-center rounded-lg shrink-0", cfg.bg)}>
+                    <Icon size={12} className={cfg.text} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium">{cfg.label}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {new Date(ev.income_date + "T00:00:00").toLocaleDateString("pt-BR")}
+                      {ev.ir_withheld ? ` · IR: ${fmtBRL(Number(ev.ir_withheld))}` : ""}
+                    </p>
+                  </div>
+                  <span className={cn("text-xs font-semibold shrink-0", cfg.text)}>
+                    {Number(ev.income_value) >= 0 ? "+" : "−"}{fmtBRL(Number(ev.income_value))}
+                  </span>
+                  <button onClick={() => useDeleteIncome().mutate(ev.id)}
+                    className="opacity-0 group-hover:opacity-100 flex size-6 items-center justify-center rounded-md text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-all shrink-0">
+                    <Trash2 size={10} />
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {eventoModal && (
+        <NovoEventoModal
+          investment={inv}
+          incomeTypes={incomeTypes}
+          onClose={() => setEventoModal(false)}
+        />
+      )}
+    </>
+  )
+}
+
+// ── Modal: Novo Investimento ──────────────────────────────────────────────────
+
+function NovoInvestimentoModal({ onClose }: { onClose: () => void }) {
+  const { data: types = [] } = useInvestmentTypes()
+  const { goals = [] } = useGoals()
+  const createMut = useCreateInvestment()
+
+  const [form, setForm] = useState({
+    investment_type_id: "",
+    invested_value: "",
+    application_date: new Date().toISOString().slice(0, 10),
+    interest_rate: "",
+    maturity_date: "",
+    finalidade: "",
+    goal_id: "",
+  })
+
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setForm(prev => ({ ...prev, [k]: e.target.value }))
+
+  function handleSubmit() {
+    if (!form.investment_type_id || !form.invested_value) return
+    createMut.mutate({
+      investment_type_id: Number(form.investment_type_id),
+      invested_value: Number(form.invested_value.replace(",", ".")),
+      application_date: form.application_date,
+      interest_rate: form.interest_rate ? Number(form.interest_rate) / 100 : undefined,
+      maturity_date: form.maturity_date || undefined,
+      finalidade: form.finalidade || undefined,
+      goal_id: form.goal_id ? Number(form.goal_id) : undefined,
+    }, { onSuccess: onClose })
+  }
+
+  return (
+    <ModalSheet onClose={onClose}>
+      <div className="flex items-center justify-between shrink-0 px-5 py-4 border-b border-border">
+        <h2 className="text-sm font-semibold">Novo Investimento</h2>
+        <button onClick={onClose} className="flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted transition-colors">
+          <X size={16} />
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+        <select value={form.investment_type_id} onChange={set("investment_type_id")}
+          className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm">
+          <option value="">Tipo de investimento...</option>
+          {types.map(t => <option key={t.id} value={t.id}>{t.description} ({t.acronym})</option>)}
+        </select>
+        <Input placeholder="Valor aplicado (R$)" type="number" value={form.invested_value} onChange={set("invested_value")} className="h-9 text-sm" />
+        <Input placeholder="Data de aplicação" type="date" value={form.application_date} onChange={set("application_date")} className="h-9 text-sm" />
+        <Input placeholder="Taxa de juros (% a.a.) — opcional" type="number" value={form.interest_rate} onChange={set("interest_rate")} className="h-9 text-sm" />
+        <Input placeholder="Vencimento — opcional" type="date" value={form.maturity_date} onChange={set("maturity_date")} className="h-9 text-sm" />
+        <select value={form.finalidade} onChange={set("finalidade")}
+          className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm">
+          <option value="">Finalidade — opcional</option>
+          {FINALIDADES.map(f => <option key={f} value={f}>{f}</option>)}
+        </select>
+        <select value={form.goal_id} onChange={set("goal_id")}
+          className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm">
+          <option value="">Vincular a uma meta — opcional</option>
+          {goals.filter(g => g.status === "em_andamento").map(g => (
+            <option key={g.id} value={g.id}>{g.title}</option>
+          ))}
+        </select>
+      </div>
+      <div className="flex gap-2 shrink-0 px-5 py-4 border-t border-border">
+        <Button variant="outline" size="sm" className="flex-1" onClick={onClose}>Cancelar</Button>
+        <Button size="sm" className="flex-1" onClick={handleSubmit} disabled={createMut.isPending}>
+          {createMut.isPending ? <Loader2 size={14} className="animate-spin" /> : "Adicionar"}
+        </Button>
+      </div>
+    </ModalSheet>
+  )
+}
+
+// ── Modal: Novo Evento ────────────────────────────────────────────────────────
+
+function NovoEventoModal({ investment, incomeTypes, onClose }: {
+  investment: InvestmentEnriched
+  incomeTypes: any[]
+  onClose: () => void
+}) {
+  const createIncMut = useCreateIncome()
+  const [form, setForm] = useState({
+    income_type_id: "",
+    income_value: "",
+    income_date: new Date().toISOString().slice(0, 10),
+    ir_withheld: "",
+  })
+
+  function handleSubmit() {
+    if (!form.income_type_id || !form.income_value) return
+    createIncMut.mutate({
+      investment_id: investment.id,
+      income_type_id: Number(form.income_type_id),
+      income_value: Number(form.income_value.replace(",", ".")),
+      income_date: form.income_date,
+      ir_withheld: form.ir_withheld ? Number(form.ir_withheld) : undefined,
+    }, { onSuccess: onClose })
+  }
+
+  return (
+    <ModalSheet onClose={onClose}>
+      <div className="flex items-center justify-between shrink-0 px-5 py-4 border-b border-border">
+        <div>
+          <h2 className="text-sm font-semibold">Registrar Evento</h2>
+          <p className="text-xs text-muted-foreground truncate max-w-[200px]">{investment.typeName}</p>
+        </div>
+        <button onClick={onClose} className="flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted transition-colors">
+          <X size={16} />
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+        <select value={form.income_type_id} onChange={e => setForm(p => ({ ...p, income_type_id: e.target.value }))}
+          className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm">
+          <option value="">Tipo de evento...</option>
+          {incomeTypes.map(t => <option key={t.id} value={t.id}>{t.description}</option>)}
+        </select>
+        <Input placeholder="Valor (R$)" type="number" value={form.income_value}
+          onChange={e => setForm(p => ({ ...p, income_value: e.target.value }))} className="h-9 text-sm" />
+        <Input placeholder="Data" type="date" value={form.income_date}
+          onChange={e => setForm(p => ({ ...p, income_date: e.target.value }))} className="h-9 text-sm" />
+        <Input placeholder="IR retido (R$) — opcional" type="number" value={form.ir_withheld}
+          onChange={e => setForm(p => ({ ...p, ir_withheld: e.target.value }))} className="h-9 text-sm" />
+      </div>
+      <div className="flex gap-2 shrink-0 px-5 py-4 border-t border-border">
+        <Button variant="outline" size="sm" className="flex-1" onClick={onClose}>Cancelar</Button>
+        <Button size="sm" className="flex-1" onClick={handleSubmit} disabled={createIncMut.isPending}>
+          {createIncMut.isPending ? <Loader2 size={14} className="animate-spin" /> : "Confirmar"}
+        </Button>
+      </div>
+    </ModalSheet>
   )
 }

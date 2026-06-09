@@ -27,7 +27,8 @@ from app.api.routes import (
     automation_rule_route,
     user_route,
     category_reserve_route,
-    analytics_route
+    analytics_route,
+    guest_access_route,
 
 )
 from app.core.config import settings
@@ -62,3 +63,4 @@ api_router.include_router(balance_projection_route.router)
 api_router.include_router(external_data_route.router)
 api_router.include_router(automation_rule_route.router)
 api_router.include_router(analytics_route.router)
+api_router.include_router(guest_access_route.router) 

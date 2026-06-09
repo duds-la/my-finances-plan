@@ -24,6 +24,7 @@ import { Route as LayoutOrcamentoRouteImport } from './routes/_layout/orcamento'
 import { Route as LayoutMetasRouteImport } from './routes/_layout/metas'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutInvestimentosRouteImport } from './routes/_layout/investimentos'
+import { Route as LayoutConvidadosRouteImport } from './routes/_layout/convidados'
 import { Route as LayoutConquistasRouteImport } from './routes/_layout/conquistas'
 import { Route as LayoutConfiguracoesRouteImport } from './routes/_layout/configuracoes'
 import { Route as LayoutCaixinhasRouteImport } from './routes/_layout/caixinhas'
@@ -104,6 +105,11 @@ const LayoutInvestimentosRoute = LayoutInvestimentosRouteImport.update({
   path: '/investimentos',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutConvidadosRoute = LayoutConvidadosRouteImport.update({
+  id: '/convidados',
+  path: '/convidados',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutConquistasRoute = LayoutConquistasRouteImport.update({
   id: '/conquistas',
   path: '/conquistas',
@@ -140,6 +146,7 @@ export interface FileRoutesByFullPath {
   '/caixinhas': typeof LayoutCaixinhasRoute
   '/configuracoes': typeof LayoutConfiguracoesRoute
   '/conquistas': typeof LayoutConquistasRoute
+  '/convidados': typeof LayoutConvidadosRoute
   '/investimentos': typeof LayoutInvestimentosRoute
   '/items': typeof LayoutItemsRoute
   '/metas': typeof LayoutMetasRoute
@@ -161,6 +168,7 @@ export interface FileRoutesByTo {
   '/caixinhas': typeof LayoutCaixinhasRoute
   '/configuracoes': typeof LayoutConfiguracoesRoute
   '/conquistas': typeof LayoutConquistasRoute
+  '/convidados': typeof LayoutConvidadosRoute
   '/investimentos': typeof LayoutInvestimentosRoute
   '/items': typeof LayoutItemsRoute
   '/metas': typeof LayoutMetasRoute
@@ -184,6 +192,7 @@ export interface FileRoutesById {
   '/_layout/caixinhas': typeof LayoutCaixinhasRoute
   '/_layout/configuracoes': typeof LayoutConfiguracoesRoute
   '/_layout/conquistas': typeof LayoutConquistasRoute
+  '/_layout/convidados': typeof LayoutConvidadosRoute
   '/_layout/investimentos': typeof LayoutInvestimentosRoute
   '/_layout/items': typeof LayoutItemsRoute
   '/_layout/metas': typeof LayoutMetasRoute
@@ -207,6 +216,7 @@ export interface FileRouteTypes {
     | '/caixinhas'
     | '/configuracoes'
     | '/conquistas'
+    | '/convidados'
     | '/investimentos'
     | '/items'
     | '/metas'
@@ -228,6 +238,7 @@ export interface FileRouteTypes {
     | '/caixinhas'
     | '/configuracoes'
     | '/conquistas'
+    | '/convidados'
     | '/investimentos'
     | '/items'
     | '/metas'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/_layout/caixinhas'
     | '/_layout/configuracoes'
     | '/_layout/conquistas'
+    | '/_layout/convidados'
     | '/_layout/investimentos'
     | '/_layout/items'
     | '/_layout/metas'
@@ -377,6 +389,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutInvestimentosRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/convidados': {
+      id: '/_layout/convidados'
+      path: '/convidados'
+      fullPath: '/convidados'
+      preLoaderRoute: typeof LayoutConvidadosRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/conquistas': {
       id: '/_layout/conquistas'
       path: '/conquistas'
@@ -421,6 +440,7 @@ interface LayoutRouteChildren {
   LayoutCaixinhasRoute: typeof LayoutCaixinhasRoute
   LayoutConfiguracoesRoute: typeof LayoutConfiguracoesRoute
   LayoutConquistasRoute: typeof LayoutConquistasRoute
+  LayoutConvidadosRoute: typeof LayoutConvidadosRoute
   LayoutInvestimentosRoute: typeof LayoutInvestimentosRoute
   LayoutItemsRoute: typeof LayoutItemsRoute
   LayoutMetasRoute: typeof LayoutMetasRoute
@@ -439,6 +459,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutCaixinhasRoute: LayoutCaixinhasRoute,
   LayoutConfiguracoesRoute: LayoutConfiguracoesRoute,
   LayoutConquistasRoute: LayoutConquistasRoute,
+  LayoutConvidadosRoute: LayoutConvidadosRoute,
   LayoutInvestimentosRoute: LayoutInvestimentosRoute,
   LayoutItemsRoute: LayoutItemsRoute,
   LayoutMetasRoute: LayoutMetasRoute,
