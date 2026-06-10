@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, redirect, useNavigate } from "@tanstack/react-router"
 import { useEffect } from "react"
+import { AnimatedBackground } from "@/components/Common/AnimatedBackground"
 import { MobileBottomNav } from "@/components/Common/MobileBottomNav"
 import { Footer } from "@/components/Common/Footer"
 import AppSidebar from "@/components/Sidebar/AppSidebar"
@@ -47,11 +48,14 @@ function Layout() {
 
   return (
     <UserContext.Provider value={contextValue}>
+      {/* Atmosfera cinematográfica global — fixa, atrás de tudo */}
+      <AnimatedBackground />
+
       <SidebarProvider>
         <AppSidebar />
 
-        <SidebarInset className="min-h-svh">
-          <header className="sticky top-0 z-10 hidden md:flex h-16 shrink-0 items-center gap-2 border-b bg-background/80 backdrop-blur-sm px-4">
+        <SidebarInset className="relative z-10 min-h-svh bg-transparent">
+          <header className="sticky top-0 z-10 hidden md:flex h-16 shrink-0 items-center gap-2 border-b border-border/50 bg-background/60 backdrop-blur-xl px-4">
             <SidebarTrigger className="-ml-1 text-muted-foreground" />
           </header>
 

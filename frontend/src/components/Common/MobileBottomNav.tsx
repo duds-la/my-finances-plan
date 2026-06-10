@@ -21,9 +21,9 @@ const navItems = [
 // ── Itens do painel "Mais" (dono) ─────────────────────────────────────────────
 
 const moreItems = [
-  { icon: Wallet,            label: "Orçamento",     path: "/orcamento",     color: "#4ade80" },
+  { icon: Wallet,            label: "Orçamento",     path: "/orcamento",     color: "#34d399" },
   { icon: Archive,           label: "Caixinhas",     path: "/caixinhas",     color: "#22d3ee" },
-  { icon: CreditCard,        label: "Parcelamentos", path: "/parcelamentos", color: "#f87171" },
+  { icon: CreditCard,        label: "Parcelamentos", path: "/parcelamentos", color: "#fb7185" },
   { icon: PieChart,          label: "Portfólio",     path: "/portfolio",     color: "#a78bfa" },
   { icon: Zap,               label: "Simulações",    path: "/simulacoes",    color: "#fbbf24" },
   { icon: Trophy,            label: "Conquistas",    path: "/conquistas",    color: "#fb923c" },
@@ -39,6 +39,38 @@ const guestNavItems = [
   { icon: TrendingUp, label: "Investimentos", path: "/investimentos" },
 ]
 
+// ── Item do dock ──────────────────────────────────────────────────────────────
+
+function DockItem({
+  icon: Icon, label, path,
+}: { icon: React.ElementType; label: string; path: string }) {
+  return (
+    <Link
+      to={path}
+      className="flex flex-1 flex-col items-center justify-center gap-1 py-2 text-muted-foreground transition-colors"
+      activeProps={{ className: "!text-primary" }}
+    >
+      {({ isActive }: { isActive: boolean }) => (
+        <>
+          <div
+            className={cn(
+              "flex h-8 w-12 items-center justify-center rounded-full transition-all duration-300",
+              isActive
+                ? "bg-primary/15 shadow-[0_0_16px_-2px_var(--glow-primary)] scale-105"
+                : "scale-100",
+            )}
+          >
+            <Icon size={18} strokeWidth={isActive ? 2.5 : 1.75} />
+          </div>
+          <span className={cn("text-[10px] font-medium leading-none", isActive && "text-primary")}>
+            {label}
+          </span>
+        </>
+      )}
+    </Link>
+  )
+}
+
 // ── Painel "Mais" ─────────────────────────────────────────────────────────────
 
 function MorePanel({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -53,16 +85,32 @@ function MorePanel({ open, onClose }: { open: boolean; onClose: () => void }) {
 
   return createPortal(
     <>
-      <div className="fixed inset-0 z-[9998] bg-black/50 backdrop-blur-sm md:hidden" onClick={onClose} />
-      <div className="fixed inset-x-0 bottom-16 z-[9999] md:hidden px-3 pb-2" onClick={e => e.stopPropagation()}>
-        <div className="rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Mais opções</span>
-            <button onClick={onClose} className="flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted transition-colors">
+      <div
+        className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-sm md:hidden animate-scale-in"
+        onClick={onClose}
+      />
+      <div
+        className="fixed inset-x-0 z-[9999] px-3 md:hidden"
+        style={{ bottom: "calc(env(safe-area-inset-bottom) + 5.5rem)" }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="glass-card animate-fade-up overflow-hidden rounded-2xl shadow-2xl">
+          {/* Borda superior iluminada */}
+          <div className="divider-glow" />
+
+          <div className="flex items-center justify-between border-b border-border/50 px-4 py-3">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Mais opções
+            </span>
+            <button
+              onClick={onClose}
+              className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted"
+            >
               <X size={14} />
             </button>
           </div>
-          <div className="grid grid-cols-4 gap-0 p-2">
+
+          <div className="stagger-children grid grid-cols-4 gap-0 p-2">
             {moreItems.map(({ icon: Icon, label, path, color }) => (
               <Link
                 key={path}
@@ -73,11 +121,22 @@ function MorePanel({ open, onClose }: { open: boolean; onClose: () => void }) {
               >
                 {({ isActive }: { isActive: boolean }) => (
                   <>
-                    <div className={cn("flex size-10 items-center justify-center rounded-xl transition-all", isActive ? "scale-105" : "")}
-                      style={{ backgroundColor: `${color}20` }}>
+                    <div
+                      className={cn(
+                        "flex size-10 items-center justify-center rounded-xl transition-all duration-200",
+                        isActive && "scale-110",
+                      )}
+                      style={{
+                        backgroundColor: `${color}1f`,
+                        boxShadow: isActive ? `0 0 18px -4px ${color}` : undefined,
+                      }}
+                    >
                       <Icon size={18} style={{ color }} strokeWidth={isActive ? 2.5 : 1.75} />
                     </div>
-                    <span className={cn("text-[10px] font-medium leading-tight text-center", isActive ? "text-foreground" : "")}>
+                    <span className={cn(
+                      "text-center text-[10px] font-medium leading-tight",
+                      isActive && "text-foreground",
+                    )}>
                       {label}
                     </span>
                   </>
@@ -92,7 +151,7 @@ function MorePanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   )
 }
 
-// ── Bottom Nav ────────────────────────────────────────────────────────────────
+// ── Bottom Nav (dock flutuante) ───────────────────────────────────────────────
 
 export function MobileBottomNav() {
   const [moreOpen, setMoreOpen] = useState(false)
@@ -101,67 +160,51 @@ export function MobileBottomNav() {
   // Modo convidado: só 2 botões, sem "Mais"
   if (isGuest) {
     return (
-      <nav className="fixed bottom-0 inset-x-0 z-50 border-t border-border bg-card/95 backdrop-blur-md md:hidden">
-        <div className="flex items-stretch h-16">
-          {guestNavItems.map(({ icon: Icon, label, path }) => (
-            <Link
-              key={path}
-              to={path}
-              className="flex flex-1 flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
-              activeProps={{ className: "!text-primary" }}
-            >
-              {({ isActive }: { isActive: boolean }) => (
-                <>
-                  <div className={cn("flex size-8 items-center justify-center rounded-xl transition-all duration-200", isActive ? "bg-primary/15 scale-110" : "")}>
-                    <Icon size={18} strokeWidth={isActive ? 2.5 : 1.75} />
-                  </div>
-                  <span className={cn("text-[10px] font-medium leading-none", isActive ? "text-primary" : "")}>{label}</span>
-                </>
-              )}
-            </Link>
+      <nav
+        className="fixed inset-x-3 z-50 md:hidden"
+        style={{ bottom: "calc(env(safe-area-inset-bottom) + 0.75rem)" }}
+      >
+        <div className="glass-card flex items-stretch rounded-2xl shadow-[0_8px_40px_-8px_rgba(0,0,0,0.5)]">
+          {guestNavItems.map((item) => (
+            <DockItem key={item.path} {...item} />
           ))}
         </div>
-        <div className="h-[env(safe-area-inset-bottom)]" />
       </nav>
     )
   }
 
-  // Modo normal: nav completa com "Mais"
+  // Modo normal: dock completa com "Mais"
   return (
     <>
       <MorePanel open={moreOpen} onClose={() => setMoreOpen(false)} />
 
-      <nav className="fixed bottom-0 inset-x-0 z-50 border-t border-border bg-card/95 backdrop-blur-md md:hidden">
-        <div className="flex items-stretch h-16">
-          {navItems.map(({ icon: Icon, label, path }) => (
-            <Link
-              key={path}
-              to={path}
-              className="flex flex-1 flex-col items-center justify-center gap-1 text-muted-foreground transition-colors"
-              activeProps={{ className: "!text-primary" }}
-            >
-              {({ isActive }: { isActive: boolean }) => (
-                <>
-                  <div className={cn("flex size-8 items-center justify-center rounded-xl transition-all duration-200", isActive ? "bg-primary/15 scale-110" : "")}>
-                    <Icon size={18} strokeWidth={isActive ? 2.5 : 1.75} />
-                  </div>
-                  <span className={cn("text-[10px] font-medium leading-none", isActive ? "text-primary" : "")}>{label}</span>
-                </>
-              )}
-            </Link>
+      <nav
+        className="fixed inset-x-3 z-50 md:hidden"
+        style={{ bottom: "calc(env(safe-area-inset-bottom) + 0.75rem)" }}
+      >
+        <div className="glass-card flex items-stretch rounded-2xl shadow-[0_8px_40px_-8px_rgba(0,0,0,0.5)]">
+          {navItems.map((item) => (
+            <DockItem key={item.path} {...item} />
           ))}
 
           <button
             onClick={() => setMoreOpen(v => !v)}
-            className={cn("flex flex-1 flex-col items-center justify-center gap-1 transition-colors", moreOpen ? "text-primary" : "text-muted-foreground")}
+            className={cn(
+              "flex flex-1 flex-col items-center justify-center gap-1 py-2 transition-colors",
+              moreOpen ? "text-primary" : "text-muted-foreground",
+            )}
           >
-            <div className={cn("flex size-8 items-center justify-center rounded-xl transition-all duration-200", moreOpen ? "bg-primary/15 scale-110" : "")}>
+            <div
+              className={cn(
+                "flex h-8 w-12 items-center justify-center rounded-full transition-all duration-300",
+                moreOpen && "bg-primary/15 shadow-[0_0_16px_-2px_var(--glow-primary)] scale-105",
+              )}
+            >
               {moreOpen ? <X size={18} strokeWidth={2.5} /> : <MoreHorizontal size={18} strokeWidth={1.75} />}
             </div>
             <span className="text-[10px] font-medium leading-none">Mais</span>
           </button>
         </div>
-        <div className="h-[env(safe-area-inset-bottom)]" />
       </nav>
     </>
   )
