@@ -15,7 +15,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { api, BASE } from "@/lib/api"
 import type { FinancialGoal } from "./useGoals"
-import type { Investment } from "./useInvestments"
+import type { Investment, InvestmentType } from "./useInvestments"
+import { invKeys } from "./useInvestments"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,15 @@ export interface MyGuestAccess {
   shared_goal_ids: number[]
   shared_investment_ids: number[]
   owner_id: number
+}
+
+// Investimento compartilhado já enriquecido com dados do tipo
+export interface SharedInvestmentEnriched extends Investment {
+  typeName: string
+  typeAcronym: string
+  isFixedIncome: boolean
+  currentValue: number
+  rentabilidadePct: number
 }
 
 // ── Query keys ────────────────────────────────────────────────────────────────
@@ -144,10 +154,15 @@ export function useSharedGoals(enabled: boolean) {
   })
 }
 
-// ── Hook: convidado lê investimentos compartilhados ───────────────────────────
+// ── Hook: convidado lê investimentos compartilhados (com enrich de tipos) ─────
+//
+// O endpoint /shared/investimentos retorna Investment[] (sem investment_type aninhado).
+// Buscamos os tipos de investimento separadamente via /investment_type/ (endpoint
+// público, convidado também tem acesso) e fazemos o enrich no frontend,
+// igual ao que useInvestments() faz para o dono.
 
 export function useSharedInvestments(enabled: boolean) {
-  return useQuery({
+  const { data: rawInvs = [], isLoading: loadingInvs } = useQuery({
     queryKey: guestKeys.sharedInvs,
     queryFn: async (): Promise<Investment[]> => {
       const { data } = await api.get(`${BASE}/guest_access/shared/investimentos`)
@@ -155,4 +170,40 @@ export function useSharedInvestments(enabled: boolean) {
     },
     enabled,
   })
+
+  // Reutiliza a mesma query key dos tipos, que pode já estar em cache
+  const { data: types = [], isLoading: loadingTypes } = useQuery({
+    queryKey: invKeys.types,
+    queryFn: async (): Promise<InvestmentType[]> => {
+      const { data } = await api.get(`${BASE}/investment_type/`)
+      return data
+    },
+    enabled,
+    staleTime: 10 * 60 * 1000,
+  })
+
+  const typeMap = Object.fromEntries(types.map(t => [t.id, t]))
+
+  const enriched: SharedInvestmentEnriched[] = rawInvs.map(inv => {
+    const type         = typeMap[inv.investment_type_id]
+    const currentValue = Number(inv.current_value ?? inv.invested_value ?? 0)
+    const investedVal  = Number(inv.invested_value ?? 0)
+    const rentabilidadePct = investedVal > 0
+      ? ((currentValue - investedVal) / investedVal) * 100
+      : 0
+
+    return {
+      ...inv,
+      typeName:       type?.description  ?? "Investimento",
+      typeAcronym:    type?.acronym      ?? "INV",
+      isFixedIncome:  type?.fixed_income ?? false,
+      currentValue,
+      rentabilidadePct,
+    }
+  })
+
+  return {
+    data: enriched,
+    isLoading: loadingInvs || loadingTypes,
+  }
 }

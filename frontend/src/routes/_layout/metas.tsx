@@ -679,7 +679,7 @@ function GuestMetasView() {
         <div className="slide-up flex items-start justify-between">
           <div>
             <p className="text-[11px] tracking-widest uppercase text-cyan-400 mb-1 flex items-center gap-1.5">
-              <Share2 size={10} /> Compartilhado comigo
+              <Share2 size={10} /> Nossas Metas
             </p>
             <h1 className="text-2xl font-black text-white tracking-tight">Metas Financeiras</h1>
             {!isLoading && (
