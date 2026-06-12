@@ -3,10 +3,11 @@ import { createFileRoute } from "@tanstack/react-router"
 import { useState, useCallback } from "react"
 import {
   Plus, X, Loader2, Check, Sparkles, Calendar,
-  ChevronRight, ArrowUp, Share2, Eye, Zap,
+  ChevronRight, ArrowUp, Share2, Eye, Zap, Pencil, Trash2,
 } from "lucide-react"
 import {
-  useGoals, useCreateGoal, useAddContribution, useGoalContributions,
+  useGoals, useCreateGoal, useUpdateGoal, useDeleteGoal,
+  useAddContribution, useGoalContributions,
   type FinancialGoal,
 } from "@/hooks/api/useGoals"
 import { useSharedGoals } from "@/hooks/api/useGuestAccess"
@@ -369,9 +370,40 @@ function DetailPanel({ meta, themeIdx, onClose, isShared = false }: {
 }) {
   const th = T(themeIdx)
   const addMut = useAddContribution()
+  const updateMut = useUpdateGoal()
+  const deleteMut = useDeleteGoal()
   const { data: contribs = [], isLoading: loadingC } = useGoalContributions(meta.id)
   const [val, setVal] = useState("")
   const [sent, setSent] = useState(false)
+  const [editMode, setEditMode] = useState(false)
+  const [confirmDel, setConfirmDel] = useState(false)
+  const [editForm, setEditForm] = useState({
+    title: meta.title,
+    target: String(meta.target_value),
+    deadline: meta.deadline ?? "",
+    suggested: meta.suggested_contribution ? String(meta.suggested_contribution) : "",
+  })
+
+  async function handleUpdate() {
+    if (!editForm.title.trim() || !editForm.target) return
+    await updateMut.mutateAsync({
+      id: meta.id,
+      data: {
+        title: editForm.title.trim(),
+        target_value: parseFloat(String(editForm.target).replace(",", ".")),
+        deadline: editForm.deadline || undefined,
+        suggested_contribution: editForm.suggested
+          ? parseFloat(String(editForm.suggested).replace(",", "."))
+          : undefined,
+      },
+    })
+    onClose() // fecha para recarregar com os dados atualizados
+  }
+
+  async function handleDelete() {
+    await deleteMut.mutateAsync(meta.id)
+    onClose()
+  }
 
   const pct = Number(meta.target_value) > 0
     ? Math.min(100, Math.round((Number(meta.current_value) / Number(meta.target_value)) * 100))
@@ -446,10 +478,42 @@ function DetailPanel({ meta, themeIdx, onClose, isShared = false }: {
                 <p className="font-display truncate text-lg font-black text-foreground">{meta.title}</p>
               </div>
 
-              <button onClick={onClose}
-                className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-muted/50 text-muted-foreground transition-colors hover:bg-muted">
-                <X size={15} />
-              </button>
+              <div className="flex shrink-0 items-center gap-1.5">
+                {!isShared && (
+                  <>
+                    <button onClick={() => { setEditMode(v => !v); setConfirmDel(false) }}
+                      title="Editar meta"
+                      className={`flex size-8 items-center justify-center rounded-xl transition-colors ${
+                        editMode ? "bg-primary/15 text-primary" : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}>
+                      <Pencil size={13} />
+                    </button>
+                    {confirmDel ? (
+                      <div className="m-scale-in flex items-center gap-1">
+                        <button onClick={handleDelete} disabled={deleteMut.isPending}
+                          title="Confirmar exclusão"
+                          className="flex size-8 items-center justify-center rounded-xl bg-rose-500/15 text-rose-400 transition-colors hover:bg-rose-500/25">
+                          {deleteMut.isPending ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                        </button>
+                        <button onClick={() => setConfirmDel(false)}
+                          className="flex size-8 items-center justify-center rounded-xl bg-muted/50 text-muted-foreground transition-colors hover:bg-muted">
+                          <X size={13} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button onClick={() => { setConfirmDel(true); setEditMode(false) }}
+                        title="Excluir meta"
+                        className="flex size-8 items-center justify-center rounded-xl bg-muted/50 text-muted-foreground transition-colors hover:bg-rose-500/15 hover:text-rose-400">
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </>
+                )}
+                <button onClick={onClose}
+                  className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-muted/50 text-muted-foreground transition-colors hover:bg-muted">
+                  <X size={15} />
+                </button>
+              </div>
             </div>
 
             {/* stats row */}
@@ -470,6 +534,67 @@ function DetailPanel({ meta, themeIdx, onClose, isShared = false }: {
 
           {/* scrollable body */}
           <div className="flex-1 space-y-5 overflow-y-auto px-5 py-4">
+
+            {/* edição da meta — owner only */}
+            {!isShared && editMode && (
+              <div className="m-scale-in space-y-3 rounded-2xl border border-primary/25 bg-primary/5 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[.16em] text-primary">
+                  Editar Meta
+                </p>
+                <div>
+                  <label className="mb-1.5 block text-[10px] uppercase tracking-widest text-muted-foreground">Nome</label>
+                  <input
+                    className="w-full rounded-xl border border-input bg-background/60 px-4 py-2.5 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
+                    value={editForm.title}
+                    onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1.5 block text-[10px] uppercase tracking-widest text-muted-foreground">Valor alvo</label>
+                    <input
+                      className="font-numeric w-full rounded-xl border border-input bg-background/60 px-4 py-2.5 text-sm text-foreground outline-none transition-all focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
+                      type="number" inputMode="decimal"
+                      value={editForm.target}
+                      onChange={e => setEditForm(f => ({ ...f, target: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-[10px] uppercase tracking-widest text-muted-foreground">Aporte/mês</label>
+                    <input
+                      className="font-numeric w-full rounded-xl border border-input bg-background/60 px-4 py-2.5 text-sm text-foreground outline-none transition-all focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
+                      type="number" inputMode="decimal" placeholder="opcional"
+                      value={editForm.suggested}
+                      onChange={e => setEditForm(f => ({ ...f, suggested: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-[10px] uppercase tracking-widest text-muted-foreground">Prazo</label>
+                  <input
+                    className="w-full rounded-xl border border-input bg-background/60 px-4 py-2.5 text-sm text-foreground outline-none transition-all focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
+                    type="date"
+                    value={editForm.deadline}
+                    onChange={e => setEditForm(f => ({ ...f, deadline: e.target.value }))}
+                  />
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button onClick={() => setEditMode(false)}
+                    className="tap-scale flex-1 rounded-xl border border-border bg-muted/40 py-2.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted">
+                    Cancelar
+                  </button>
+                  <button onClick={handleUpdate}
+                    disabled={updateMut.isPending || !editForm.title.trim() || !editForm.target}
+                    className="tap-scale flex-1 rounded-xl py-2.5 text-xs font-bold text-white disabled:opacity-40"
+                    style={{
+                      background: `linear-gradient(135deg,${th.from},${th.to})`,
+                      boxShadow: `0 4px 18px ${th.glow}`,
+                    }}>
+                    {updateMut.isPending ? <Loader2 size={13} className="mx-auto animate-spin" /> : "Salvar alterações"}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* aporte — somente dono */}
             {!isShared && !done && (

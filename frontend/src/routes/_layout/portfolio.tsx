@@ -417,9 +417,15 @@ function PortfolioPage() {
             .filter(i => i.status === "ativo")
             .sort((a, b) => b.currentValue - a.currentValue)
             .map((inv, idx) => {
-              const rent = Number(inv.invested_value) > 0
-                ? ((inv.currentValue - Number(inv.invested_value)) / Number(inv.invested_value)) * 100
-                : 0
+              // rentabilidadePct vem do hook e considera o total aportado
+              // (inicial + aportes), não só o invested_value inicial — senão
+              // um aporte adicional apareceria como "lucro".
+              const totalInvested = Number(inv.totalInvested ?? inv.invested_value ?? 0)
+              const rent = typeof inv.rentabilidadePct === "number"
+                ? inv.rentabilidadePct
+                : totalInvested > 0
+                  ? ((inv.currentValue - totalInvested) / totalInvested) * 100
+                  : 0
               const isPos = rent >= 0
               return (
                 <div key={inv.id}
