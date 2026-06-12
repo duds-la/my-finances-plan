@@ -85,7 +85,7 @@ function GuestModal({ editing, onClose }: GuestModalProps) {
         showSuccessToast("Convidado atualizado com sucesso")
       } else {
         if (!name.trim() || !password.trim()) {
-          showErrorToast(new Error("Preencha nome de usuário e senha"))
+          showErrorToast("Preencha nome de usuário e senha")
           return
         }
         const payload: GuestAccessCreate = {

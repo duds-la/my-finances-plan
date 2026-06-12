@@ -229,7 +229,11 @@ function ModalSheet({ onClose, children }: { onClose: () => void; children: Reac
 function InvestimentoCardReadOnly({ inv }: { inv: any }) {
   const currentValue = Number(inv?.current_value ?? inv?.currentValue ?? inv?.invested_value ?? 0)
   const investedValue = Number(inv?.invested_value ?? 0)
-  const rent = investedValue > 0 ? ((currentValue - investedValue) / investedValue) * 100 : 0
+  const rent = typeof inv.rentabilidadePct === "number"
+                ? inv.rentabilidadePct
+                : investedValue > 0
+                  ? ((inv.currentValue - investedValue) / investedValue) * 100
+                  : 0
   const isPositive = rent >= 0
   const acronym = inv?.investment_type?.acronym ?? inv?.typeAcronym ?? "?"
   const color = PALETTE[Number(inv?.id ?? 0) % PALETTE.length]
