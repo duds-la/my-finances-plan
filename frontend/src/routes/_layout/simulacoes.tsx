@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useSimulations, useCreateSimulation, useDeleteSimulation } from "@/hooks/api/useSimulations"
 import type { Simulation } from "@/hooks/api/useSimulations"
+import { PageHeader } from "@/components/Common/PageHeader"
 
 export const Route = createFileRoute("/_layout/simulacoes")({
   component: SimulacoesPage,
@@ -34,7 +35,7 @@ const TIPOS: Record<string, { label: string; icon: React.ElementType; cor: strin
   juros_compostos: {
     label: "Juros Compostos",
     icon: TrendingUp,
-    cor: "#4ade80",
+    cor: "#34d399",
     descricao: "Evolução de capital com aportes mensais",
   },
   prazo_meta: {
@@ -58,13 +59,13 @@ const TIPOS: Record<string, { label: string; icon: React.ElementType; cor: strin
   independencia_financeira: {
     label: "Independência Financeira",
     icon: Flame,
-    cor: "#f43f5e",
+    cor: "#fb7185",
     descricao: "Quanto acumular para viver de renda passiva",
   },
   inflacao: {
     label: "Erosão pela Inflação",
     icon: BadgeDollarSign,
-    cor: "#facc15",
+    cor: "#fbbf24",
     descricao: "Poder de compra real de um valor ao longo do tempo",
   },
   financiamento: {
@@ -360,14 +361,14 @@ function PreviewJurosCompostos({ params }: { params: Record<string, number> }) {
   return (
     <div className="mt-4 rounded-xl border border-border bg-muted/30 p-4 space-y-4">
       <div className="flex items-center gap-1.5">
-        <Sparkles size={12} className="text-[#4ade80]" />
-        <span className="text-xs font-semibold text-[#4ade80] uppercase tracking-wider">Prévia</span>
+        <Sparkles size={12} className="text-[#34d399]" />
+        <span className="text-xs font-semibold text-[#34d399] uppercase tracking-wider">Prévia</span>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
         <div>
           <p className="text-[10px] text-muted-foreground mb-0.5">Montante final</p>
-          <p className="text-sm font-bold text-[#4ade80]">{fmtBRLShort(result.montante_final)}</p>
+          <p className="text-sm font-bold text-[#34d399]">{fmtBRLShort(result.montante_final)}</p>
         </div>
         <div>
           <p className="text-[10px] text-muted-foreground mb-0.5">Investido</p>
@@ -375,7 +376,7 @@ function PreviewJurosCompostos({ params }: { params: Record<string, number> }) {
         </div>
         <div>
           <p className="text-[10px] text-muted-foreground mb-0.5">Juros ({pct}%)</p>
-          <p className="text-sm font-semibold text-[#4ade80]">{fmtBRLShort(result.juros_ganhos)}</p>
+          <p className="text-sm font-semibold text-[#34d399]">{fmtBRLShort(result.juros_ganhos)}</p>
         </div>
       </div>
 
@@ -384,8 +385,8 @@ function PreviewJurosCompostos({ params }: { params: Record<string, number> }) {
           <AreaChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="gradPreview" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#4ade80" stopOpacity={0.25} />
-                <stop offset="95%" stopColor="#4ade80" stopOpacity={0} />
+                <stop offset="5%" stopColor="#34d399" stopOpacity={0.25} />
+                <stop offset="95%" stopColor="#34d399" stopOpacity={0} />
               </linearGradient>
             </defs>
             <XAxis dataKey="mes" hide />
@@ -393,9 +394,9 @@ function PreviewJurosCompostos({ params }: { params: Record<string, number> }) {
             <Tooltip
               formatter={(v: any) => [fmtBRL(v), "Montante"]}
               labelFormatter={(l) => `Mês ${l}`}
-              contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
+              contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 11 }}
             />
-            <Area type="monotone" dataKey="valor" stroke="#4ade80" strokeWidth={2} fill="url(#gradPreview)" dot={false} />
+            <Area type="monotone" dataKey="valor" stroke="#34d399" strokeWidth={2} fill="url(#gradPreview)" dot={false} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -458,7 +459,7 @@ function PreviewPrazoMeta({ params }: { params: Record<string, number> }) {
             <Tooltip
               formatter={(v: any, name: any) => [fmtBRL(v), name === "saldo" ? "Saldo" : "Alvo"]}
               labelFormatter={(l) => `Mês ${l}`}
-              contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
+              contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 11 }}
             />
             <Area type="monotone" dataKey="alvo" stroke="#a78bfa" strokeWidth={1} strokeDasharray="4 2" fill="none" dot={false} />
             <Area type="monotone" dataKey="saldo" stroke="#a78bfa" strokeWidth={2} fill="url(#gradMeta)" dot={false} />
@@ -487,12 +488,12 @@ function PreviewComparacao({ params }: { params: Record<string, number> }) {
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-lg bg-card border border-border p-2.5">
           <p className="text-[10px] text-muted-foreground mb-0.5">Taxa A ({params.taxa_a}% a.m.)</p>
-          <p className="text-sm font-bold">{fmtBRLShort(result.montante_a)}</p>
+          <p className="font-numeric text-sm font-bold">{fmtBRLShort(result.montante_a)}</p>
           <p className="text-[10px] text-[#22d3ee]">+{fmtBRLShort(result.rendimento_a)}</p>
         </div>
         <div className="rounded-lg bg-card border border-border p-2.5">
           <p className="text-[10px] text-muted-foreground mb-0.5">Taxa B ({params.taxa_b}% a.m.)</p>
-          <p className="text-sm font-bold">{fmtBRLShort(result.montante_b)}</p>
+          <p className="font-numeric text-sm font-bold">{fmtBRLShort(result.montante_b)}</p>
           <p className="text-[10px] text-[#22d3ee]">+{fmtBRLShort(result.rendimento_b)}</p>
         </div>
       </div>
@@ -521,7 +522,7 @@ function PreviewComparacao({ params }: { params: Record<string, number> }) {
             <Tooltip
               formatter={(v: any, name: any) => [fmtBRL(v), name === "a" ? "Taxa A" : "Taxa B"]}
               labelFormatter={(l) => `Mês ${l}`}
-              contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
+              contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 11 }}
             />
             <Area type="monotone" dataKey="a" stroke="#22d3ee" strokeWidth={2} fill="url(#gradA)" dot={false} />
             <Area type="monotone" dataKey="b" stroke="#f472b6" strokeWidth={2} fill="url(#gradB)" dot={false} />
@@ -557,7 +558,7 @@ function PreviewParcelamento({ params }: { params: Record<string, number> }) {
       <div className="grid grid-cols-3 gap-3">
         <div>
           <p className="text-[10px] text-muted-foreground mb-0.5">Parcela mensal</p>
-          <p className="text-sm font-bold" style={{ color: cor }}>{fmtBRLShort(result.parcela_mensal)}</p>
+          <p className="font-numeric text-sm font-bold" style={{ color: cor }}>{fmtBRLShort(result.parcela_mensal)}</p>
         </div>
         <div>
           <p className="text-[10px] text-muted-foreground mb-0.5">Total pago</p>
@@ -584,7 +585,7 @@ function PreviewParcelamento({ params }: { params: Record<string, number> }) {
               <Tooltip
                 formatter={(v: any, name: any) => [fmtBRL(v), name === "saldo" ? "Saldo devedor" : "Juros"]}
                 labelFormatter={(l) => `Parcela ${l}`}
-                contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
+                contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 11 }}
               />
               <Area type="monotone" dataKey="saldo" stroke={cor} strokeWidth={2} fill="url(#gradParc)" dot={false} />
             </AreaChart>
@@ -602,7 +603,7 @@ function PreviewFIRE({ params }: { params: Record<string, number> }) {
   }, [params])
 
   if (!result) return null
-  const cor = "#f43f5e"
+  const cor = "#fb7185"
 
   const chartData = result.historico.map((v, i) => ({
     periodo: i * 6,
@@ -620,7 +621,7 @@ function PreviewFIRE({ params }: { params: Record<string, number> }) {
       <div className="grid grid-cols-3 gap-3">
         <div>
           <p className="text-[10px] text-muted-foreground mb-0.5">Patrimônio necessário</p>
-          <p className="text-sm font-bold" style={{ color: cor }}>{fmtBRLShort(result.patrimonio_necessario)}</p>
+          <p className="font-numeric text-sm font-bold" style={{ color: cor }}>{fmtBRLShort(result.patrimonio_necessario)}</p>
         </div>
         <div>
           <p className="text-[10px] text-muted-foreground mb-0.5">Renda passiva</p>
@@ -651,7 +652,7 @@ function PreviewFIRE({ params }: { params: Record<string, number> }) {
               <Tooltip
                 formatter={(v: any, name: any) => [fmtBRL(v), name === "patrimonio" ? "Patrimônio" : "Meta"]}
                 labelFormatter={(l) => `Mês ${l}`}
-                contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
+                contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 11 }}
               />
               <ReferenceLine y={result.patrimonio_necessario} stroke={cor} strokeDasharray="4 2" strokeWidth={1} />
               <Area type="monotone" dataKey="patrimonio" stroke={cor} strokeWidth={2} fill="url(#gradFIRE)" dot={false} />
@@ -670,7 +671,7 @@ function PreviewInflacao({ params }: { params: Record<string, number> }) {
   }, [params])
 
   if (!result) return null
-  const cor = "#facc15"
+  const cor = "#fbbf24"
   const perdaPct = ((result.perda_poder_compra / params.valor_presente) * 100).toFixed(1)
 
   return (
@@ -683,7 +684,7 @@ function PreviewInflacao({ params }: { params: Record<string, number> }) {
       <div className="grid grid-cols-3 gap-3">
         <div>
           <p className="text-[10px] text-muted-foreground mb-0.5">Valor real em {params.anos}a</p>
-          <p className="text-sm font-bold" style={{ color: cor }}>{fmtBRLShort(result.valor_real)}</p>
+          <p className="font-numeric text-sm font-bold" style={{ color: cor }}>{fmtBRLShort(result.valor_real)}</p>
         </div>
         <div>
           <p className="text-[10px] text-muted-foreground mb-0.5">Perda de poder de compra</p>
@@ -709,7 +710,7 @@ function PreviewInflacao({ params }: { params: Record<string, number> }) {
             <Tooltip
               formatter={(v: any, name: any) => [fmtBRL(v), name === "nominal" ? "Valor nominal" : "Poder de compra real"]}
               labelFormatter={(l) => `Ano ${l}`}
-              contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
+              contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 11 }}
             />
             <Area type="monotone" dataKey="nominal" stroke="#94a3b8" strokeWidth={1}
               strokeDasharray="4 2" fill="none" dot={false} />
@@ -761,7 +762,7 @@ function FormJurosCompostos({ onSave }: { onSave: (p: Record<string, number>, r:
 
       <PreviewJurosCompostos params={params} />
 
-      <Button size="sm" className="w-full" onClick={calcular}
+      <Button size="sm" className="glow-primary w-full" onClick={calcular}
         disabled={!f.principal || !f.taxa_mensal || !f.meses}>
         Salvar simulação
       </Button>
@@ -809,7 +810,7 @@ function FormPrazoMeta({ onSave }: { onSave: (p: Record<string, number>, r: Reco
 
       <PreviewPrazoMeta params={params} />
 
-      <Button size="sm" className="w-full" onClick={calcular}
+      <Button size="sm" className="glow-primary w-full" onClick={calcular}
         disabled={!f.valor_alvo || !f.aporte_mensal}>
         Salvar simulação
       </Button>
@@ -857,7 +858,7 @@ function FormComparacao({ onSave }: { onSave: (p: Record<string, number>, r: Rec
 
       <PreviewComparacao params={params} />
 
-      <Button size="sm" className="w-full" onClick={calcular}
+      <Button size="sm" className="glow-primary w-full" onClick={calcular}
         disabled={!f.principal || !f.meses || !f.taxa_a || !f.taxa_b}>
         Salvar simulação
       </Button>
@@ -903,7 +904,7 @@ function FormParcelamento({ onSave }: { onSave: (p: Record<string, number>, r: R
         </div>
       </div>
       <PreviewParcelamento params={params} />
-      <Button size="sm" className="w-full" onClick={calcular}
+      <Button size="sm" className="glow-primary w-full" onClick={calcular}
         disabled={!f.valor_compra || !f.num_parcelas}>
         Salvar simulação
       </Button>
@@ -957,7 +958,7 @@ function FormFIRE({ onSave }: { onSave: (p: Record<string, number>, r: Record<st
         A regra dos 4% (taxa de saque padrão) sugere que você pode retirar 4% do patrimônio por ano indefinidamente.
       </p>
       <PreviewFIRE params={params} />
-      <Button size="sm" className="w-full" onClick={calcular}
+      <Button size="sm" className="glow-primary w-full" onClick={calcular}
         disabled={!f.gasto_mensal || !f.taxa_rendimento}>
         Salvar simulação
       </Button>
@@ -998,7 +999,7 @@ function FormInflacao({ onSave }: { onSave: (p: Record<string, number>, r: Recor
         </div>
       </div>
       <PreviewInflacao params={params} />
-      <Button size="sm" className="w-full" onClick={calcular}
+      <Button size="sm" className="glow-primary w-full" onClick={calcular}
         disabled={!f.valor_presente || !f.taxa_inflacao || !f.anos}>
         Salvar simulação
       </Button>
@@ -1027,15 +1028,15 @@ function ChartJurosCompostos({ result, cor }: { result: Record<string, unknown>;
               <stop offset="95%" stopColor={cor} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-          <XAxis dataKey="mes" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+          <XAxis dataKey="mes" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
             tickFormatter={(v) => `${v}m`} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-          <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+          <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
             tickFormatter={fmtBRLShort} tickLine={false} axisLine={false} width={52} />
           <Tooltip
             formatter={(v: any) => [fmtBRL(v), "Montante"]}
             labelFormatter={(l) => `Mês ${l}`}
-            contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
+            contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 11 }}
           />
           <Area type="monotone" dataKey="valor" stroke={cor} strokeWidth={2}
             fill={`url(#gc-${cor.replace("#", "")})`} dot={false} />
@@ -1069,15 +1070,15 @@ function ChartPrazoMeta({ result, params, cor }: {
               <stop offset="95%" stopColor={cor} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-          <XAxis dataKey="mes" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+          <XAxis dataKey="mes" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
             tickFormatter={(v) => `${v}m`} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-          <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+          <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
             tickFormatter={fmtBRLShort} tickLine={false} axisLine={false} width={52} />
           <Tooltip
             formatter={(v: any, name: any) => [fmtBRL(v), name === "saldo" ? "Saldo" : "Alvo"]}
             labelFormatter={(l) => `Mês ${l}`}
-            contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
+            contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 11 }}
           />
           <Area type="monotone" dataKey="alvo" stroke={cor} strokeWidth={1}
             strokeDasharray="4 2" fill="none" dot={false} />
@@ -1107,15 +1108,15 @@ function ChartComparacao({ result }: { result: Record<string, unknown> }) {
               <stop offset="95%" stopColor="#f472b6" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-          <XAxis dataKey="mes" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+          <XAxis dataKey="mes" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
             tickFormatter={(v) => `${v}m`} tickLine={false} axisLine={false} />
-          <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+          <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
             tickFormatter={fmtBRLShort} tickLine={false} axisLine={false} width={52} />
           <Tooltip
             formatter={(v: any, name: any) => [fmtBRL(v), name === "a" ? "Taxa A" : "Taxa B"]}
             labelFormatter={(l) => `Mês ${l}`}
-            contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
+            contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 11 }}
           />
           <Area type="monotone" dataKey="a" stroke="#22d3ee" strokeWidth={2} fill="url(#gcmpA)" dot={false} />
           <Area type="monotone" dataKey="b" stroke="#f472b6" strokeWidth={2} fill="url(#gcmpB)" dot={false} />
@@ -1142,15 +1143,15 @@ function ChartParcelamento({ result, cor }: { result: Record<string, unknown>; c
               <stop offset="95%" stopColor={cor} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-          <XAxis dataKey="parcela" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+          <XAxis dataKey="parcela" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
             tickFormatter={(v) => `${v}x`} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-          <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+          <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
             tickFormatter={fmtBRLShort} tickLine={false} axisLine={false} width={52} />
           <Tooltip
             formatter={(v: any, name: any) => [fmtBRL(v), name === "saldo" ? "Saldo devedor" : "Juros"]}
             labelFormatter={(l) => `Parcela ${l}`}
-            contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
+            contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 11 }}
           />
           <Area type="monotone" dataKey="saldo" stroke={cor} strokeWidth={2} fill="url(#gcParc)" dot={false} />
         </AreaChart>
@@ -1176,15 +1177,15 @@ function ChartFIRE({ result, cor }: { result: Record<string, unknown>; cor: stri
               <stop offset="95%" stopColor={cor} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-          <XAxis dataKey="periodo" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+          <XAxis dataKey="periodo" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
             tickFormatter={(v) => `${v}m`} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-          <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+          <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
             tickFormatter={fmtBRLShort} tickLine={false} axisLine={false} width={52} />
           <Tooltip
             formatter={(v: any, name: any) => [fmtBRL(v), name === "patrimonio" ? "Patrimônio" : "Meta"]}
             labelFormatter={(l) => `Mês ${l}`}
-            contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
+            contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 11 }}
           />
           {meta && <ReferenceLine y={meta} stroke={cor} strokeDasharray="4 2" strokeWidth={1} />}
           <Area type="monotone" dataKey="patrimonio" stroke={cor} strokeWidth={2} fill="url(#gcFIRE)" dot={false} />
@@ -1212,15 +1213,15 @@ function ChartInflacao({ result, cor }: {
               <stop offset="95%" stopColor={cor} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-          <XAxis dataKey="ano" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+          <XAxis dataKey="ano" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
             tickFormatter={(v) => `${v}a`} tickLine={false} axisLine={false} />
-          <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+          <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
             tickFormatter={fmtBRLShort} tickLine={false} axisLine={false} width={52} />
           <Tooltip
             formatter={(v: any, name: any) => [fmtBRL(v), name === "nominal" ? "Nominal" : "Poder de compra real"]}
             labelFormatter={(l) => `Ano ${l}`}
-            contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
+            contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 11 }}
           />
           <Area type="monotone" dataKey="nominal" stroke="#94a3b8" strokeWidth={1}
             strokeDasharray="4 2" fill="none" dot={false} />
@@ -1331,7 +1332,7 @@ function PreviewFinanciamento({ params }: { params: Record<string, number> }) {
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-lg bg-card border border-border p-2.5">
           <p className="text-[10px] text-muted-foreground mb-0.5">Total pago</p>
-          <p className="text-sm font-bold" style={{ color: cor }}>{fmtBRLShort(result.total_pago_fin)}</p>
+          <p className="font-numeric text-sm font-bold" style={{ color: cor }}>{fmtBRLShort(result.total_pago_fin)}</p>
         </div>
         <div className="rounded-lg bg-card border border-border p-2.5">
           <p className="text-[10px] text-muted-foreground mb-0.5">Total de juros</p>
@@ -1344,11 +1345,11 @@ function PreviewFinanciamento({ params }: { params: Record<string, number> }) {
         style={{ borderColor: `${cor}40`, background: `${cor}08` }}>
         <div>
           <p className="text-[10px] text-muted-foreground">Taxa mensal implícita</p>
-          <p className="text-base font-bold" style={{ color: cor }}>{result.taxa_mensal_impl.toFixed(2)}% a.m.</p>
+          <p className="font-numeric text-base font-bold" style={{ color: cor }}>{result.taxa_mensal_impl.toFixed(2)}% a.m.</p>
         </div>
         <div className="text-right">
           <p className="text-[10px] text-muted-foreground">Taxa anual implícita</p>
-          <p className="text-base font-bold" style={{ color: cor }}>{result.taxa_anual_impl.toFixed(2)}% a.a.</p>
+          <p className="font-numeric text-base font-bold" style={{ color: cor }}>{result.taxa_anual_impl.toFixed(2)}% a.a.</p>
         </div>
       </div>
 
@@ -1368,7 +1369,7 @@ function PreviewFinanciamento({ params }: { params: Record<string, number> }) {
               <Tooltip
                 formatter={(v: any) => [fmtBRL(v), "Saldo devedor"]}
                 labelFormatter={(l) => `Parcela ${l}`}
-                contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
+                contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 11 }}
               />
               <Area type="monotone" dataKey="saldo" stroke={cor} strokeWidth={2} fill="url(#gradFinPrev)" dot={false} />
             </AreaChart>
@@ -1460,7 +1461,7 @@ function FormFinanciamento({ onSave }: { onSave: (p: Record<string, number>, r: 
 
       <PreviewFinanciamento params={params} />
 
-      <Button size="sm" className="w-full" onClick={calcular}
+      <Button size="sm" className="glow-primary w-full" onClick={calcular}
         disabled={!f.valor_imovel || !f.valor_parcela || !f.num_parcelas_fin || parcelasInsuficientes}>
         Salvar simulação
       </Button>
@@ -1485,10 +1486,10 @@ function ChartFinanciamento({ result, cor }: { result: Record<string, unknown>; 
               <stop offset="95%" stopColor={cor} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-          <XAxis dataKey="parcela" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+          <XAxis dataKey="parcela" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
             tickFormatter={(v) => `${v}x`} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-          <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+          <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
             tickFormatter={fmtBRLShort} tickLine={false} axisLine={false} width={52} />
           <Tooltip
             formatter={(v: any, name: any) => [
@@ -1496,7 +1497,7 @@ function ChartFinanciamento({ result, cor }: { result: Record<string, unknown>; 
               name === "saldo" ? "Saldo devedor" : name === "juros" ? "Juros" : "Amortização",
             ]}
             labelFormatter={(l) => `Parcela ${l}`}
-            contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
+            contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 11 }}
           />
           <Area type="monotone" dataKey="saldo" stroke={cor} strokeWidth={2} fill="url(#gcFin)" dot={false} />
         </AreaChart>
@@ -1533,10 +1534,12 @@ function ResultCard({ sim, onDelete }: { sim: Simulation; onDelete: () => void }
   }, [sim, r])
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <div className="glass-card relative overflow-hidden rounded-xl p-4 transition-all duration-300 hover:-translate-y-0.5">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px"
+        style={{ background: `linear-gradient(90deg, transparent, ${cor}55, transparent)` }} />
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg" style={{ background: `${cor}20` }}>
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg" style={{ background: `${cor}20`, boxShadow: `0 0 12px -5px ${cor}` }}>
             <Icon size={14} style={{ color: cor }} />
           </div>
           <div className="min-w-0">
@@ -1551,7 +1554,7 @@ function ResultCard({ sim, onDelete }: { sim: Simulation; onDelete: () => void }
           {destaque && !expanded && (
             <div className="text-right">
               <p className="text-[10px] text-muted-foreground">{destaque.label}</p>
-              <p className="text-xs font-bold" style={{ color: cor }}>{destaque.valor}</p>
+              <p className="font-numeric text-xs font-bold" style={{ color: cor }}>{destaque.valor}</p>
             </div>
           )}
           <button onClick={() => setExpanded(v => !v)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted">
@@ -1595,7 +1598,7 @@ function ResultCard({ sim, onDelete }: { sim: Simulation; onDelete: () => void }
               {Object.entries(p).map(([k, v]) => (
                 <div key={k} className="flex justify-between text-xs">
                   <span className="text-muted-foreground">{labelParam(k)}</span>
-                  <span className="font-medium">{fmtParamValue(k, v)}</span>
+                  <span className="font-numeric font-medium">{fmtParamValue(k, v)}</span>
                 </div>
               ))}
             </div>
@@ -1609,7 +1612,7 @@ function ResultCard({ sim, onDelete }: { sim: Simulation; onDelete: () => void }
                 {Object.entries(r).filter(([k]) => k !== "historico").map(([k, v]) => (
                   <div key={k} className="flex justify-between text-xs">
                     <span className="text-muted-foreground">{labelResult(k)}</span>
-                    <span className="font-semibold">{fmtResultValue(k, v)}</span>
+                    <span className="font-numeric font-semibold">{fmtResultValue(k, v)}</span>
                   </div>
                 ))}
               </div>
@@ -1636,16 +1639,18 @@ function NovaSimulacaoModal({ onClose }: { onClose: () => void }) {
     <>
       <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="fixed inset-0 z-[61] flex items-end sm:items-center justify-center pointer-events-none">
-        <div className="pointer-events-auto w-full sm:max-w-md flex flex-col max-h-[90svh] rounded-t-2xl sm:rounded-2xl border border-border bg-card shadow-xl">
+        <div className="glass-card pointer-events-auto flex max-h-[90svh] w-full flex-col overflow-hidden rounded-t-2xl shadow-2xl sm:max-w-md sm:rounded-2xl">
+
+          <div className="divider-glow shrink-0" />
 
           {/* Handle mobile */}
           <div className="flex justify-center pt-3 pb-1 sm:hidden shrink-0">
-            <div className="h-1 w-10 rounded-full bg-border" />
+            <div className="h-1 w-10 rounded-full bg-muted-foreground/30" />
           </div>
 
           {/* Header */}
-          <div className="flex items-center justify-between px-5 pt-3 pb-4 border-b border-border shrink-0">
-            <h2 className="text-base font-semibold">
+          <div className="flex items-center justify-between px-5 pt-3 pb-4 border-b border-border/50 shrink-0">
+            <h2 className="font-display text-base font-semibold">
               {tipo ? TIPOS[tipo]?.label : "Nova Simulação"}
             </h2>
             <div className="flex items-center gap-2">
@@ -1668,8 +1673,8 @@ function NovaSimulacaoModal({ onClose }: { onClose: () => void }) {
               <div className="space-y-2">
                 {Object.entries(TIPOS).map(([key, { label, icon: Icon, cor, descricao }]) => (
                   <button key={key} onClick={() => setTipo(key)}
-                    className="flex w-full items-center gap-3 rounded-xl border border-border p-3 text-left hover:bg-muted/50 transition-colors">
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg" style={{ background: `${cor}20` }}>
+                    className="flex w-full items-center gap-3 rounded-xl border border-border/60 p-3 text-left transition-all duration-200 hover:translate-x-0.5 hover:bg-muted/40">
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg" style={{ background: `${cor}20`, boxShadow: `0 0 12px -5px ${cor}` }}>
                       <Icon size={14} style={{ color: cor }} />
                     </div>
                     <div>
@@ -1721,9 +1726,9 @@ function SimulacoesPage() {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="h-8 w-48 animate-pulse rounded bg-muted" />
+        <div className="skeleton h-8 w-48" />
         <div className="space-y-3">
-          {[...Array(3)].map((_, i) => <div key={i} className="h-20 animate-pulse rounded-xl bg-muted" />)}
+          {[...Array(3)].map((_, i) => <div key={i} className="skeleton h-20 rounded-xl" />)}
         </div>
       </div>
     )
@@ -1734,17 +1739,16 @@ function SimulacoesPage() {
       {modalOpen && <NovaSimulacaoModal onClose={() => setModalOpen(false)} />}
 
       {/* Cabeçalho */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight sm:text-xl">Simulações</h1>
-          <p className="text-xs text-muted-foreground">
-            {simulations.length} simulaç{simulations.length !== 1 ? "ões" : "ão"} salva{simulations.length !== 1 ? "s" : ""}
-          </p>
-        </div>
-        <Button size="sm" onClick={() => setModalOpen(true)} className="gap-1.5">
-          <Plus size={14} /> Nova
-        </Button>
-      </div>
+      <PageHeader
+        eyebrow="Laboratório financeiro"
+        title="Simulações"
+        subtitle={`${simulations.length} simulaç${simulations.length !== 1 ? "ões" : "ão"} salva${simulations.length !== 1 ? "s" : ""}`}
+        action={
+          <Button size="sm" onClick={() => setModalOpen(true)} className="glow-primary gap-1.5">
+            <Plus size={14} /> Nova
+          </Button>
+        }
+      />
 
       {/* Filtro por tipo */}
       {simulations.length > 0 && (
@@ -1753,8 +1757,8 @@ function SimulacoesPage() {
             onClick={() => setFiltroTipo(null)}
             className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
               !filtroTipo
-                ? "bg-foreground text-background"
-                : "bg-muted text-muted-foreground hover:text-foreground"
+                ? "glow-primary bg-primary text-primary-foreground"
+                : "glass-card text-muted-foreground hover:text-foreground"
             }`}
           >
             Todos
@@ -1769,7 +1773,7 @@ function SimulacoesPage() {
                 className={`shrink-0 flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                   filtroTipo === key
                     ? "text-background"
-                    : "bg-muted text-muted-foreground hover:text-foreground"
+                    : "glass-card text-muted-foreground hover:text-foreground"
                 }`}
                 style={filtroTipo === key ? { background: cor } : {}}
               >
@@ -1785,7 +1789,7 @@ function SimulacoesPage() {
 
       {/* Lista de simulações */}
       {simulacoesFiltradas.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="glass-card animate-fade-up flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16 text-center">
           <div className="flex size-12 items-center justify-center rounded-2xl bg-muted mb-3">
             <Calculator size={20} className="text-muted-foreground" />
           </div>
@@ -1796,13 +1800,13 @@ function SimulacoesPage() {
             {filtroTipo ? "Tente outro filtro ou crie uma nova simulação" : "Crie sua primeira para visualizar projeções financeiras"}
           </p>
           {!filtroTipo && (
-            <Button size="sm" className="mt-4 gap-1.5" onClick={() => setModalOpen(true)}>
+            <Button size="sm" className="glow-primary mt-4 gap-1.5" onClick={() => setModalOpen(true)}>
               <Plus size={14} /> Nova simulação
             </Button>
           )}
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="stagger-children space-y-3">
           {simulacoesFiltradas.map(sim => (
             <ResultCard
               key={sim.id}

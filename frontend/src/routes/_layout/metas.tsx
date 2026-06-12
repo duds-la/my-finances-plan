@@ -1,6 +1,6 @@
 // frontend/src/routes/_layout/metas.tsx
 import { createFileRoute } from "@tanstack/react-router"
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useCallback } from "react"
 import {
   Plus, X, Loader2, Check, Sparkles, Calendar,
   ChevronRight, ArrowUp, Share2, Eye, Zap,
@@ -11,6 +11,7 @@ import {
 } from "@/hooks/api/useGoals"
 import { useSharedGoals } from "@/hooks/api/useGuestAccess"
 import { useUserContext } from "@/contexts/UserContext"
+import { CountUp } from "@/components/Common/CountUp"
 
 export const Route = createFileRoute("/_layout/metas")({
   component: MetasPage,
@@ -22,9 +23,9 @@ export const Route = createFileRoute("/_layout/metas")({
 // ─────────────────────────────────────────────────────────────────────────────
 
 const fmtBRL = (v: number) =>
-  Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })
+  Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })
 const fmtBRLFull = (v: number) =>
-  Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+  Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 const fmtDate = (s: string) =>
   new Date(s + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })
 
@@ -43,98 +44,68 @@ const THEMES = [
 const T = (i: number) => THEMES[i % THEMES.length]
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Global CSS — injected once, cinematic keyframes
+// CSS local — keyframes com prefixo mg- para NÃO conflitar com o index.css
+// (o `shimmer` global do skeleton era sobrescrito pela versão antiga daqui)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const CSS = `
-  /* ── Entrance ── */
-  @keyframes fade-up   { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
-  @keyframes fade-in   { from{opacity:0} to{opacity:1} }
-  @keyframes scale-in  { from{opacity:0;transform:scale(.92)} to{opacity:1;transform:scale(1)} }
+  @keyframes mg-fade-up  { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes mg-fade-in  { from{opacity:0} to{opacity:1} }
+  @keyframes mg-scale-in { from{opacity:0;transform:scale(.92)} to{opacity:1;transform:scale(1)} }
 
-  /* ── Aurora layers ── */
-  @keyframes aurora-drift {
+  @keyframes mg-aurora-drift {
     0%,100%{transform:translate(0,0) scale(1)}
     33%     {transform:translate(4%,-3%) scale(1.08)}
     66%     {transform:translate(-3%,4%) scale(.96)}
   }
-  @keyframes aurora-pulse {
+  @keyframes mg-aurora-pulse {
     0%,100%{opacity:.18}
     50%     {opacity:.32}
   }
 
-  /* ── Card shimmer ── */
-  @keyframes shimmer {
+  @keyframes mg-shimmer {
     0%  {background-position:-200% 0}
     100%{background-position:200% 0}
   }
 
-  /* ── Progress ring draw ── */
-  @keyframes ring-draw {
+  @keyframes mg-ring-draw {
     from{stroke-dashoffset:var(--dash-total)}
     to  {stroke-dashoffset:var(--dash-offset)}
   }
 
-  /* ── Float ── */
-  @keyframes float {
-    0%,100%{transform:translateY(0)}
-    50%    {transform:translateY(-5px)}
-  }
-
-  /* ── Particle orbit ── */
-  @keyframes orbit {
+  @keyframes mg-orbit {
     from{transform:rotate(0deg) translateX(var(--r)) rotate(0deg)}
     to  {transform:rotate(360deg) translateX(var(--r)) rotate(-360deg)}
   }
 
-  /* ── Celebration burst ── */
-  @keyframes burst {
-    0%  {transform:scale(0) rotate(0deg); opacity:1}
-    80% {transform:scale(1.4) rotate(180deg); opacity:.6}
-    100%{transform:scale(1.6) rotate(220deg); opacity:0}
-  }
+  .m-fade-up  { animation: mg-fade-up  .55s cubic-bezier(.22,1,.36,1) both }
+  .m-fade-in  { animation: mg-fade-in  .4s ease both }
+  .m-scale-in { animation: mg-scale-in .45s cubic-bezier(.22,1,.36,1) both }
 
-  /* ── Glow pulse on complete ── */
-  @keyframes glow-pulse {
-    0%,100%{box-shadow:0 0 20px var(--glow)}
-    50%    {box-shadow:0 0 48px var(--glow), 0 0 80px var(--glow)}
-  }
-
-  /* ── Slide tokens ── */
-  .m-fade-up  { animation: fade-up  .55s cubic-bezier(.22,1,.36,1) both }
-  .m-fade-in  { animation: fade-in  .4s ease both }
-  .m-scale-in { animation: scale-in .45s cubic-bezier(.22,1,.36,1) both }
-
-  /* ── Shimmer bar ── */
   .shimmer-bar {
-    background: linear-gradient(90deg,transparent 0%,rgba(255,255,255,.35) 50%,transparent 100%);
+    background-image: linear-gradient(90deg,transparent 0%,rgba(255,255,255,.35) 50%,transparent 100%);
     background-size: 200% 100%;
-    animation: shimmer 2.2s linear infinite;
+    animation: mg-shimmer 2.2s linear infinite;
   }
 
-  /* ── Float card ── */
-  .m-float { animation: float 5s ease-in-out infinite }
-
-  /* ── Tap feedback ── */
   .tap-scale { transition: transform .12s; }
   .tap-scale:active { transform: scale(.97) }
 `
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Aurora — fixed, z-[-1], no layout interference
+// Aurora local — camada EXTRA reativa ao mouse, por cima da aurora global.
+// Sem base escura nem vinheta (isso agora é do AnimatedBackground do _layout),
+// então o light mode volta a funcionar.
 // ─────────────────────────────────────────────────────────────────────────────
 
 function Aurora({ mx, my }: { mx: number; my: number }) {
   return (
-    <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: -1 }}>
-      {/* base dark */}
-      <div className="absolute inset-0" style={{ background: "#06060f" }} />
-
+    <div className="pointer-events-none fixed inset-0 overflow-hidden" style={{ zIndex: -1 }}>
       {/* layer 1 — mouse-reactive indigo/violet */}
       <div className="absolute inset-0" style={{
         background: `radial-gradient(ellipse 90% 70% at ${38 + mx * 24}% ${28 + my * 18}%,
           rgba(99,102,241,.45) 0%, rgba(168,85,247,.22) 42%, transparent 68%)`,
-        opacity: .28,
+        opacity: .2,
         transition: "background .6s ease-out",
       }} />
 
@@ -142,28 +113,23 @@ function Aurora({ mx, my }: { mx: number; my: number }) {
       <div className="absolute inset-0" style={{
         background: `radial-gradient(ellipse 65% 55% at ${68 - mx * 12}% ${62 + my * 12}%,
           rgba(6,182,212,.55) 0%, rgba(16,185,129,.2) 48%, transparent 70%)`,
-        animation: "aurora-drift 14s ease-in-out infinite, aurora-pulse 7s ease-in-out infinite",
-        opacity: .22,
+        animation: "mg-aurora-drift 14s ease-in-out infinite, mg-aurora-pulse 7s ease-in-out infinite",
+        opacity: .16,
       }} />
 
       {/* layer 3 — animated rose/amber accent */}
       <div className="absolute inset-0" style={{
         background: `radial-gradient(ellipse 100% 45% at 18% 85%,
           rgba(244,63,94,.28) 0%, rgba(251,146,60,.14) 52%, transparent 72%)`,
-        animation: "aurora-drift 20s ease-in-out infinite reverse, aurora-pulse 9s ease-in-out infinite 2s",
-        opacity: .18,
-      }} />
-
-      {/* subtle vignette */}
-      <div className="absolute inset-0" style={{
-        background: "radial-gradient(ellipse 120% 120% at 50% 50%, transparent 40%, rgba(0,0,0,.55) 100%)",
+        animation: "mg-aurora-drift 20s ease-in-out infinite reverse, mg-aurora-pulse 9s ease-in-out infinite 2s",
+        opacity: .13,
       }} />
     </div>
   )
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Progress Ring — SVG with animated draw
+// Progress Ring — SVG com draw animado
 // ─────────────────────────────────────────────────────────────────────────────
 
 function Ring({ pct, sz, theme, animate = true }: {
@@ -189,7 +155,7 @@ function Ring({ pct, sz, theme, animate = true }: {
 
       {/* track */}
       <circle cx={sz/2} cy={sz/2} r={r} fill="none"
-        stroke="rgba(255,255,255,0.07)" strokeWidth={6} />
+        stroke="var(--border)" strokeOpacity={0.6} strokeWidth={6} />
 
       {/* fill */}
       <circle cx={sz/2} cy={sz/2} r={r} fill="none"
@@ -202,7 +168,7 @@ function Ring({ pct, sz, theme, animate = true }: {
         style={animate ? {
           "--dash-total": circ,
           "--dash-offset": offset,
-          animation: "ring-draw 1.2s cubic-bezier(.22,1,.36,1) .3s both",
+          animation: "mg-ring-draw 1.2s cubic-bezier(.22,1,.36,1) .3s both",
         } as React.CSSProperties : { strokeDashoffset: offset }}
       />
     </svg>
@@ -210,40 +176,7 @@ function Ring({ pct, sz, theme, animate = true }: {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Orbit particles (decorative, only on desktop/hover)
-// ─────────────────────────────────────────────────────────────────────────────
-
-function Particles({ theme }: { theme: typeof THEMES[0] }) {
-  const dots = [
-    { r: 44, dur: "4.5s", del: "0s",   sz: 3 },
-    { r: 56, dur: "7s",   del: "-2.2s", sz: 2 },
-    { r: 36, dur: "5.8s", del: "-1s",   sz: 2 },
-  ]
-  return (
-    <div className="absolute inset-0 pointer-events-none hidden sm:block">
-      {dots.map((d, i) => (
-        <div key={i} className="absolute inset-0 flex items-center justify-center">
-          <div style={{
-            width: d.sz * 2, height: d.sz * 2,
-            "--r": `${d.r}px`,
-            animation: `orbit ${d.dur} linear ${d.del} infinite`,
-          } as React.CSSProperties}>
-            <div style={{
-              width: d.sz * 2, height: d.sz * 2,
-              borderRadius: "50%",
-              background: theme.from,
-              boxShadow: `0 0 6px 2px ${theme.from}`,
-              opacity: .7,
-            }} />
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Global Progress Arc — cinematic hero card
+// Hero Arc — card de progresso geral
 // ─────────────────────────────────────────────────────────────────────────────
 
 function HeroArc({ pct, totalAtual, totalAlvo, ativasCount, concluidasCount, isShared = false }: {
@@ -252,37 +185,36 @@ function HeroArc({ pct, totalAtual, totalAlvo, ativasCount, concluidasCount, isS
 }) {
   const theme = THEMES[0]
   return (
-    <div className="m-fade-up relative overflow-hidden rounded-3xl"
+    <div className="m-fade-up glass-card relative overflow-hidden rounded-3xl"
       style={{
         animationDelay: ".1s",
-        background: "linear-gradient(140deg, rgba(15,12,40,.96) 0%, rgba(8,8,22,.98) 100%)",
-        border: "1px solid rgba(99,102,241,.25)",
-        boxShadow: `0 0 0 1px rgba(255,255,255,.04) inset, 0 32px 64px rgba(0,0,0,.6), 0 0 48px rgba(99,102,241,.12)`,
+        border: "1px solid rgba(99,102,241,.3)",
+        boxShadow: `0 8px 32px rgba(0,0,0,.25), 0 0 48px rgba(99,102,241,.1)`,
       }}>
 
       {/* glow top-left accent */}
-      <div className="absolute -top-8 -left-8 w-40 h-40 rounded-full pointer-events-none"
+      <div className="pointer-events-none absolute -left-8 -top-8 h-40 w-40 rounded-full"
         style={{ background: `radial-gradient(circle, ${theme.from}30 0%, transparent 70%)` }} />
 
       <div className="relative flex items-center gap-4 p-4 sm:p-5">
         {/* Ring */}
-        <div className="relative shrink-0 flex items-center justify-center" style={{ width: 76, height: 76 }}>
+        <div className="relative flex shrink-0 items-center justify-center" style={{ width: 76, height: 76 }}>
           <Ring pct={pct} sz={76} theme={theme} />
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-[17px] font-black text-white tracking-tight">{pct}%</span>
+            <span className="font-numeric text-[17px] font-black tracking-tight text-foreground">{pct}%</span>
           </div>
         </div>
 
         {/* Copy */}
-        <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-semibold tracking-[.18em] uppercase mb-0.5"
+        <div className="min-w-0 flex-1">
+          <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[.18em]"
             style={{ color: isShared ? "#22d3ee" : theme.from }}>
             {isShared ? "✦ Nossas Metas" : "✦ Progresso Geral"}
           </p>
-          <p className="text-[22px] font-black text-white leading-none tracking-tight">
-            {fmtBRL(totalAtual)}
+          <p className="font-display text-[22px] font-black leading-none tracking-tight text-foreground">
+            <CountUp value={totalAtual} format={fmtBRL} duration={1400} />
           </p>
-          <p className="text-xs text-white/38 mt-1 truncate">
+          <p className="mt-1 truncate text-xs text-muted-foreground">
             de {fmtBRL(totalAlvo)} · {ativasCount} ativa{ativasCount !== 1 ? "s" : ""}
             {concluidasCount > 0 && ` · ${concluidasCount} concluída${concluidasCount !== 1 ? "s" : ""}`}
           </p>
@@ -290,8 +222,8 @@ function HeroArc({ pct, totalAtual, totalAlvo, ativasCount, concluidasCount, isS
       </div>
 
       {/* animated progress bar at bottom */}
-      <div className="h-[2px] w-full" style={{ background: "rgba(255,255,255,.05)" }}>
-        <div className="h-full shimmer-bar"
+      <div className="h-[2px] w-full bg-muted">
+        <div className="shimmer-bar h-full"
           style={{
             width: `${pct}%`,
             background: `linear-gradient(90deg, ${theme.from}, ${theme.to})`,
@@ -303,7 +235,7 @@ function HeroArc({ pct, totalAtual, totalAlvo, ativasCount, concluidasCount, isS
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Goal Card — cinematic, mobile-first
+// Goal Card
 // ─────────────────────────────────────────────────────────────────────────────
 
 function GoalCard({ meta, themeIdx, onSelect, delay = 0, isShared = false }: {
@@ -321,7 +253,7 @@ function GoalCard({ meta, themeIdx, onSelect, delay = 0, isShared = false }: {
 
   return (
     <button
-      className="w-full text-left tap-scale m-fade-up"
+      className="m-fade-up tap-scale w-full text-left"
       style={{ animationDelay: `${delay}ms` }}
       onClick={() => onSelect(meta)}
       onPointerDown={() => setPressed(true)}
@@ -334,68 +266,60 @@ function GoalCard({ meta, themeIdx, onSelect, delay = 0, isShared = false }: {
         style={{
           background: pressed
             ? `linear-gradient(135deg, ${th.from}80, ${th.to}80)`
-            : `linear-gradient(135deg, ${th.from}28, ${th.to}28)`,
+            : `linear-gradient(135deg, ${th.from}30, ${th.to}30)`,
           boxShadow: pressed
-            ? `0 0 32px ${th.glow}, 0 16px 48px rgba(0,0,0,.55)`
-            : `0 8px 28px rgba(0,0,0,.45)`,
+            ? `0 0 32px ${th.glow}, 0 16px 48px rgba(0,0,0,.35)`
+            : `0 8px 28px rgba(0,0,0,.2)`,
         }}>
-        <div
-          className="relative rounded-[22px] overflow-hidden"
-          style={{
-            background: "linear-gradient(145deg, rgba(12,11,28,.97) 0%, rgba(8,7,20,.99) 100%)",
-            "--glow": th.glow,
-          } as React.CSSProperties}>
+        <div className="glass-card relative overflow-hidden rounded-[22px]">
 
           {/* card inner glow top-right */}
-          <div className="absolute -top-6 -right-6 w-28 h-28 rounded-full pointer-events-none"
+          <div className="pointer-events-none absolute -right-6 -top-6 h-28 w-28 rounded-full"
             style={{ background: `radial-gradient(circle, ${th.to}22 0%, transparent 70%)` }} />
 
           <div className="relative p-4">
             {/* row 1: label + badge + ring */}
-            <div className="flex items-start justify-between gap-2 mb-3">
-              <div className="flex-1 min-w-0">
-                {/* status line */}
-                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                  <span className="text-[10px] font-semibold tracking-[.15em] uppercase"
+            <div className="mb-3 flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] font-semibold uppercase tracking-[.15em]"
                     style={{ color: th.from }}>
                     {done ? "✦ Concluída" : "Em andamento"}
                   </span>
                   {isShared && (
-                    <span className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-[2px] text-[9px] font-semibold shrink-0"
+                    <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-[2px] text-[9px] font-semibold"
                       style={{ background: "rgba(34,211,238,.15)", color: "#22d3ee", border: "1px solid rgba(34,211,238,.2)" }}>
                       <Share2 size={7} /> compartilhada
                     </span>
                   )}
                 </div>
-                {/* title */}
-                <p className="text-[15px] font-bold text-white truncate leading-snug">{meta.title}</p>
+                <p className="truncate text-[15px] font-bold leading-snug text-foreground">{meta.title}</p>
               </div>
 
               {/* ring */}
-              <div className="relative shrink-0 flex items-center justify-center" style={{ width: 54, height: 54 }}>
+              <div className="relative flex shrink-0 items-center justify-center" style={{ width: 54, height: 54 }}>
                 <Ring pct={pct} sz={54} theme={th} />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-[11px] font-black" style={{ color: th.from }}>{pct}%</span>
+                  <span className="font-numeric text-[11px] font-black" style={{ color: th.from }}>{pct}%</span>
                 </div>
               </div>
             </div>
 
             {/* row 2: values */}
-            <div className="flex items-end justify-between mb-3">
+            <div className="mb-3 flex items-end justify-between">
               <div>
-                <p className="text-[10px] text-white/32 mb-0.5">Acumulado</p>
-                <p className="text-[18px] font-black text-white leading-none">{fmtBRL(Number(meta.current_value))}</p>
+                <p className="mb-0.5 text-[10px] text-muted-foreground">Acumulado</p>
+                <p className="font-numeric text-[18px] font-black leading-none text-foreground">{fmtBRL(Number(meta.current_value))}</p>
               </div>
               <div className="text-right">
-                <p className="text-[10px] text-white/32 mb-0.5">Meta</p>
-                <p className="text-[13px] font-semibold" style={{ color: th.to }}>{fmtBRL(Number(meta.target_value))}</p>
+                <p className="mb-0.5 text-[10px] text-muted-foreground">Meta</p>
+                <p className="font-numeric text-[13px] font-semibold" style={{ color: th.to }}>{fmtBRL(Number(meta.target_value))}</p>
               </div>
             </div>
 
             {/* row 3: progress bar */}
-            <div className="h-[5px] rounded-full overflow-hidden mb-3"
-              style={{ background: "rgba(255,255,255,.06)" }}>
-              <div className="h-full rounded-full shimmer-bar relative"
+            <div className="mb-3 h-[5px] overflow-hidden rounded-full bg-muted">
+              <div className="shimmer-bar relative h-full rounded-full"
                 style={{
                   width: `${pct}%`,
                   background: `linear-gradient(90deg, ${th.from}, ${th.to})`,
@@ -410,15 +334,15 @@ function GoalCard({ meta, themeIdx, onSelect, delay = 0, isShared = false }: {
                 {daysLeft !== null && (
                   <div className="flex items-center gap-1.5">
                     <Calendar size={10} style={{ color: th.from }} />
-                    <span className="text-[11px] text-white/42">
+                    <span className="text-[11px] text-muted-foreground">
                       {daysLeft === 0 ? "Hoje é o prazo" : `${daysLeft}d restantes`}
                     </span>
                   </div>
                 )}
                 {meta.suggested_contribution && (
-                  <div className="flex items-center gap-1 ml-auto">
+                  <div className="ml-auto flex items-center gap-1">
                     <ArrowUp size={9} style={{ color: th.to }} />
-                    <span className="text-[11px] font-semibold" style={{ color: th.to }}>
+                    <span className="font-numeric text-[11px] font-semibold" style={{ color: th.to }}>
                       {fmtBRL(Number(meta.suggested_contribution))}/mês
                     </span>
                   </div>
@@ -437,7 +361,7 @@ function GoalCard({ meta, themeIdx, onSelect, delay = 0, isShared = false }: {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Detail Panel — bottom sheet / centered modal
+// Detail Panel — bottom sheet / modal central
 // ─────────────────────────────────────────────────────────────────────────────
 
 function DetailPanel({ meta, themeIdx, onClose, isShared = false }: {
@@ -474,43 +398,41 @@ function DetailPanel({ meta, themeIdx, onClose, isShared = false }: {
     <>
       {/* backdrop */}
       <div
-        className="fixed inset-0 m-fade-in"
-        style={{ zIndex: 60, background: "rgba(0,0,0,.72)", backdropFilter: "blur(14px)" }}
+        className="m-fade-in fixed inset-0"
+        style={{ zIndex: 60, background: "rgba(0,0,0,.6)", backdropFilter: "blur(14px)" }}
         onClick={onClose}
       />
 
       {/* sheet */}
       <div
-        className="fixed inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4 m-scale-in"
+        className="m-scale-in fixed inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4"
         style={{ zIndex: 61, pointerEvents: "none" }}>
         <div
-          className="pointer-events-auto w-full sm:max-w-lg max-h-[92svh] flex flex-col rounded-t-[28px] sm:rounded-[28px] overflow-hidden"
+          className="glass-card pointer-events-auto flex max-h-[92svh] w-full flex-col overflow-hidden rounded-t-[28px] sm:max-w-lg sm:rounded-[28px]"
           style={{
-            background: "linear-gradient(160deg, rgba(12,10,32,.99) 0%, rgba(7,6,18,1) 100%)",
-            border: "1px solid rgba(99,102,241,.22)",
-            boxShadow: `0 0 80px ${th.glow}, 0 -4px 60px rgba(0,0,0,.7)`,
+            border: "1px solid rgba(99,102,241,.3)",
+            boxShadow: `0 0 80px ${th.glow}, 0 -4px 60px rgba(0,0,0,.4)`,
           }}>
 
           {/* drag handle — mobile */}
-          <div className="flex justify-center pt-3 shrink-0 sm:hidden">
-            <div className="w-10 h-1 rounded-full" style={{ background: "rgba(255,255,255,.18)" }} />
+          <div className="flex shrink-0 justify-center pt-3 sm:hidden">
+            <div className="h-1 w-10 rounded-full bg-muted-foreground/30" />
           </div>
 
           {/* header */}
-          <div className="shrink-0 px-5 pt-4 pb-4"
-            style={{ borderBottom: "1px solid rgba(255,255,255,.06)" }}>
+          <div className="shrink-0 border-b border-border/50 px-5 pb-4 pt-4">
             <div className="flex items-start gap-3">
               {/* ring */}
-              <div className="relative shrink-0 flex items-center justify-center" style={{ width: 72, height: 72 }}>
+              <div className="relative flex shrink-0 items-center justify-center" style={{ width: 72, height: 72 }}>
                 <Ring pct={pct} sz={72} theme={th} />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-base font-black text-white">{pct}%</span>
+                  <span className="font-numeric text-base font-black text-foreground">{pct}%</span>
                 </div>
               </div>
 
-              <div className="flex-1 min-w-0 pt-1">
-                <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                  <span className="text-[10px] font-semibold tracking-[.18em] uppercase"
+              <div className="min-w-0 flex-1 pt-1">
+                <div className="mb-0.5 flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-[.18em]"
                     style={{ color: done ? "#34d399" : th.from }}>
                     {done ? "✦ Concluída" : "Meta Financeira"}
                   </span>
@@ -521,47 +443,45 @@ function DetailPanel({ meta, themeIdx, onClose, isShared = false }: {
                     </span>
                   )}
                 </div>
-                <p className="text-lg font-black text-white truncate">{meta.title}</p>
+                <p className="font-display truncate text-lg font-black text-foreground">{meta.title}</p>
               </div>
 
               <button onClick={onClose}
-                className="shrink-0 flex size-8 items-center justify-center rounded-xl text-white/35 transition-colors"
-                style={{ background: "rgba(255,255,255,.06)" }}>
+                className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-muted/50 text-muted-foreground transition-colors hover:bg-muted">
                 <X size={15} />
               </button>
             </div>
 
             {/* stats row */}
-            <div className="grid grid-cols-2 gap-2 mt-3">
+            <div className="mt-3 grid grid-cols-2 gap-2">
               {[
-                { label: "Acumulado", value: fmtBRLFull(Number(meta.current_value)), color: "text-white" },
+                { label: "Acumulado", value: fmtBRLFull(Number(meta.current_value)), color: "text-foreground" },
                 { label: "Meta", value: fmtBRLFull(Number(meta.target_value)), color: "", style: { color: th.to } },
-                faltam > 0 ? { label: "Faltam", value: fmtBRLFull(faltam), color: "text-white/55" } : null,
-                daysLeft !== null ? { label: "Prazo", value: daysLeft === 0 ? "Hoje!" : `${daysLeft}d · ${fmtDate(meta.deadline!)}`, color: "text-white/55" } : null,
+                faltam > 0 ? { label: "Faltam", value: fmtBRLFull(faltam), color: "text-muted-foreground" } : null,
+                daysLeft !== null ? { label: "Prazo", value: daysLeft === 0 ? "Hoje!" : `${daysLeft}d · ${fmtDate(meta.deadline!)}`, color: "text-muted-foreground" } : null,
               ].filter(Boolean).map((s: any, i) => (
-                <div key={i} className="rounded-xl px-3 py-2"
-                  style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.06)" }}>
-                  <p className="text-[10px] text-white/35 mb-0.5">{s.label}</p>
-                  <p className={`text-sm font-bold ${s.color}`} style={s.style}>{s.value}</p>
+                <div key={i} className="rounded-xl border border-border/50 bg-muted/30 px-3 py-2">
+                  <p className="mb-0.5 text-[10px] text-muted-foreground">{s.label}</p>
+                  <p className={`font-numeric text-sm font-bold ${s.color}`} style={s.style}>{s.value}</p>
                 </div>
               ))}
             </div>
           </div>
 
           {/* scrollable body */}
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+          <div className="flex-1 space-y-5 overflow-y-auto px-5 py-4">
 
-            {/* aporte — owner only */}
+            {/* aporte — somente dono */}
             {!isShared && !done && (
               <div>
-                <p className="text-[10px] font-semibold tracking-[.16em] uppercase text-white/32 mb-2.5">
+                <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-[.16em] text-muted-foreground">
                   Registrar Aporte
                 </p>
                 {quickVals.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-3">
+                  <div className="mb-3 flex flex-wrap gap-2">
                     {quickVals.map((v, i) => (
                       <button key={i} onClick={() => setVal(String(v))}
-                        className="rounded-xl px-3 py-1.5 text-xs font-semibold tap-scale"
+                        className="tap-scale font-numeric rounded-xl px-3 py-1.5 text-xs font-semibold"
                         style={{
                           background: `linear-gradient(135deg, ${th.from}18, ${th.to}18)`,
                           border: `1px solid ${th.from}38`,
@@ -579,17 +499,13 @@ function DetailPanel({ meta, themeIdx, onClose, isShared = false }: {
                     value={val}
                     onChange={e => setVal(e.target.value)}
                     placeholder="R$ valor do aporte"
-                    className="flex-1 rounded-xl px-4 py-2.5 text-sm text-white outline-none"
-                    style={{
-                      background: "rgba(255,255,255,.06)",
-                      border: "1px solid rgba(255,255,255,.1)",
-                    }}
+                    className="font-numeric flex-1 rounded-xl border border-input bg-background/60 px-4 py-2.5 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
                     onKeyDown={e => e.key === "Enter" && handleAport()}
                   />
                   <button
                     onClick={handleAport}
                     disabled={addMut.isPending || !val}
-                    className="rounded-xl px-4 py-2.5 text-sm font-bold text-white tap-scale disabled:opacity-40"
+                    className="tap-scale rounded-xl px-4 py-2.5 text-sm font-bold text-white disabled:opacity-40"
                     style={{
                       background: sent
                         ? "linear-gradient(135deg,#10b981,#06b6d4)"
@@ -598,7 +514,7 @@ function DetailPanel({ meta, themeIdx, onClose, isShared = false }: {
                       minWidth: 80,
                     }}>
                     {addMut.isPending
-                      ? <Loader2 size={14} className="animate-spin mx-auto" />
+                      ? <Loader2 size={14} className="mx-auto animate-spin" />
                       : sent ? <Check size={14} className="mx-auto" />
                       : "Aportar"}
                   </button>
@@ -608,29 +524,27 @@ function DetailPanel({ meta, themeIdx, onClose, isShared = false }: {
 
             {/* read-only badge */}
             {isShared && (
-              <div className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs text-white/42"
-                style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.07)" }}>
+              <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-muted/30 px-4 py-2.5 text-xs text-muted-foreground">
                 <Eye size={12} /> Somente visualização — meta compartilhada
               </div>
             )}
 
-            {/* history */}
+            {/* histórico */}
             <div>
-              <p className="text-[10px] font-semibold tracking-[.16em] uppercase text-white/32 mb-2.5">
+              <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-[.16em] text-muted-foreground">
                 Histórico de Aportes
               </p>
               {loadingC
-                ? <div className="flex justify-center py-6"><Loader2 size={20} className="animate-spin text-white/25" /></div>
+                ? <div className="flex justify-center py-6"><Loader2 size={20} className="animate-spin text-muted-foreground/50" /></div>
                 : contribs.length === 0
-                  ? <p className="text-center text-xs text-white/22 py-6">Nenhum aporte ainda</p>
+                  ? <p className="py-6 text-center text-xs text-muted-foreground/60">Nenhum aporte ainda</p>
                   : (
                     <div className="space-y-2">
                       {[...contribs].reverse().map(c => (
-                        <div key={c.id} className="flex items-center justify-between rounded-xl px-4 py-2.5"
-                          style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.06)" }}>
+                        <div key={c.id} className="flex items-center justify-between rounded-xl border border-border/50 bg-muted/30 px-4 py-2.5">
                           <div>
-                            <p className="text-sm font-bold text-white">{fmtBRLFull(Number(c.value))}</p>
-                            <p className="text-[10px] text-white/32">
+                            <p className="font-numeric text-sm font-bold text-foreground">{fmtBRLFull(Number(c.value))}</p>
+                            <p className="text-[10px] text-muted-foreground">
                               {new Date(c.contribution_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
                             </p>
                           </div>
@@ -650,6 +564,9 @@ function DetailPanel({ meta, themeIdx, onClose, isShared = false }: {
 // ─────────────────────────────────────────────────────────────────────────────
 // Nova Meta Sheet
 // ─────────────────────────────────────────────────────────────────────────────
+
+const inputClass =
+  "w-full rounded-xl border border-input bg-background/60 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-all focus:border-primary/50 focus:ring-1 focus:ring-primary/30"
 
 function NovaMetaSheet({ onClose }: { onClose: () => void }) {
   const createMut = useCreateGoal()
@@ -672,94 +589,80 @@ function NovaMetaSheet({ onClose }: { onClose: () => void }) {
     onClose()
   }
 
-  const inp: React.CSSProperties = {
-    background: "rgba(255,255,255,.06)",
-    border: "1px solid rgba(255,255,255,.1)",
-    borderRadius: 12,
-    padding: "10px 16px",
-    fontSize: 14,
-    color: "white",
-    outline: "none",
-    width: "100%",
-  }
-
   return (
     <>
-      <div className="fixed inset-0 m-fade-in"
-        style={{ zIndex: 60, background: "rgba(0,0,0,.72)", backdropFilter: "blur(14px)" }}
+      <div className="m-fade-in fixed inset-0"
+        style={{ zIndex: 60, background: "rgba(0,0,0,.6)", backdropFilter: "blur(14px)" }}
         onClick={onClose} />
 
-      <div className="fixed inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4 m-scale-in"
+      <div className="m-scale-in fixed inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4"
         style={{ zIndex: 61, pointerEvents: "none" }}>
-        <div className="pointer-events-auto w-full sm:max-w-md max-h-[92svh] flex flex-col rounded-t-[28px] sm:rounded-[28px] overflow-hidden"
+        <div className="glass-card pointer-events-auto flex max-h-[92svh] w-full flex-col overflow-hidden rounded-t-[28px] sm:max-w-md sm:rounded-[28px]"
           style={{
-            background: "linear-gradient(160deg, rgba(12,10,32,.99), rgba(7,6,18,1))",
-            border: "1px solid rgba(99,102,241,.22)",
-            boxShadow: "0 0 60px rgba(99,102,241,.25), 0 -4px 60px rgba(0,0,0,.7)",
+            border: "1px solid rgba(99,102,241,.3)",
+            boxShadow: "0 0 60px rgba(99,102,241,.25), 0 -4px 60px rgba(0,0,0,.4)",
           }}>
 
-          <div className="flex justify-center pt-3 shrink-0 sm:hidden">
-            <div className="w-10 h-1 rounded-full" style={{ background: "rgba(255,255,255,.18)" }} />
+          <div className="flex shrink-0 justify-center pt-3 sm:hidden">
+            <div className="h-1 w-10 rounded-full bg-muted-foreground/30" />
           </div>
 
           {/* header */}
-          <div className="shrink-0 flex items-center justify-between px-5 pt-4 pb-4"
-            style={{ borderBottom: "1px solid rgba(255,255,255,.06)" }}>
+          <div className="flex shrink-0 items-center justify-between border-b border-border/50 px-5 pb-4 pt-4">
             <div>
-              <p className="text-[10px] tracking-[.18em] uppercase text-indigo-400 mb-0.5">Novo Objetivo</p>
-              <h2 className="text-lg font-black text-white">Criar Meta</h2>
+              <p className="mb-0.5 text-[10px] uppercase tracking-[.18em] text-indigo-400">Novo Objetivo</p>
+              <h2 className="font-display text-lg font-black text-foreground">Criar Meta</h2>
             </div>
             <button onClick={onClose}
-              className="flex size-8 items-center justify-center rounded-xl text-white/35"
-              style={{ background: "rgba(255,255,255,.06)" }}>
+              className="flex size-8 items-center justify-center rounded-xl bg-muted/50 text-muted-foreground transition-colors hover:bg-muted">
               <X size={15} />
             </button>
           </div>
 
           {/* body */}
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+          <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
             <div>
-              <label className="block text-[10px] text-white/38 uppercase tracking-widest mb-1.5">Nome *</label>
-              <input style={inp} value={title} onChange={e => setTitle(e.target.value)}
+              <label className="mb-1.5 block text-[10px] uppercase tracking-widest text-muted-foreground">Nome *</label>
+              <input className={inputClass} value={title} onChange={e => setTitle(e.target.value)}
                 placeholder="Ex: Viagem para o Japão" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[10px] text-white/38 uppercase tracking-widest mb-1.5">Valor alvo *</label>
-                <input style={inp} type="number" inputMode="decimal"
+                <label className="mb-1.5 block text-[10px] uppercase tracking-widest text-muted-foreground">Valor alvo *</label>
+                <input className={`${inputClass} font-numeric`} type="number" inputMode="decimal"
                   value={target} onChange={e => setTarget(e.target.value)} placeholder="50000" />
               </div>
               <div>
-                <label className="block text-[10px] text-white/38 uppercase tracking-widest mb-1.5">Acumulado</label>
-                <input style={inp} type="number" inputMode="decimal"
+                <label className="mb-1.5 block text-[10px] uppercase tracking-widest text-muted-foreground">Acumulado</label>
+                <input className={`${inputClass} font-numeric`} type="number" inputMode="decimal"
                   value={current} onChange={e => setCurrent(e.target.value)} placeholder="0" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[10px] text-white/38 uppercase tracking-widest mb-1.5">Prazo</label>
-                <input style={{ ...inp, colorScheme: "dark" }} type="date"
+                <label className="mb-1.5 block text-[10px] uppercase tracking-widest text-muted-foreground">Prazo</label>
+                <input className={inputClass} type="date"
                   value={deadline} onChange={e => setDeadline(e.target.value)} />
               </div>
               <div>
-                <label className="block text-[10px] text-white/38 uppercase tracking-widest mb-1.5">Aporte/mês</label>
-                <input style={inp} type="number" inputMode="decimal"
+                <label className="mb-1.5 block text-[10px] uppercase tracking-widest text-muted-foreground">Aporte/mês</label>
+                <input className={`${inputClass} font-numeric`} type="number" inputMode="decimal"
                   value={suggested} onChange={e => setSuggested(e.target.value)} placeholder="500" />
               </div>
             </div>
           </div>
 
           {/* footer */}
-          <div className="shrink-0 px-5 py-4" style={{ borderTop: "1px solid rgba(255,255,255,.06)" }}>
+          <div className="shrink-0 border-t border-border/50 px-5 py-4">
             <button onClick={handleCreate}
               disabled={createMut.isPending || !title || !target}
-              className="w-full rounded-2xl py-3.5 text-sm font-bold text-white tap-scale disabled:opacity-40"
+              className="tap-scale w-full rounded-2xl py-3.5 text-sm font-bold text-white disabled:opacity-40"
               style={{
                 background: "linear-gradient(135deg,#6366f1,#a855f7)",
                 boxShadow: "0 8px 28px rgba(99,102,241,.4)",
               }}>
               {createMut.isPending
-                ? <Loader2 size={15} className="animate-spin mx-auto" />
+                ? <Loader2 size={15} className="mx-auto animate-spin" />
                 : <span className="flex items-center justify-center gap-2"><Sparkles size={13} /> Criar Meta</span>}
             </button>
           </div>
@@ -770,39 +673,33 @@ function NovaMetaSheet({ onClose }: { onClose: () => void }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Skeletons
+// Skeleton + Empty
 // ─────────────────────────────────────────────────────────────────────────────
 
 function Skeleton() {
   return (
     <div className="space-y-3">
-      <div className="rounded-3xl h-[88px] animate-pulse"
-        style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.05)" }} />
+      <div className="skeleton h-[88px] rounded-3xl" />
       {[1, 2].map(i => (
-        <div key={i} className="rounded-3xl h-[148px] animate-pulse"
-          style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.05)", animationDelay: `${i * 120}ms` }} />
+        <div key={i} className="skeleton h-[148px] rounded-3xl" style={{ animationDelay: `${i * 120}ms` }} />
       ))}
     </div>
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Empty
-// ─────────────────────────────────────────────────────────────────────────────
-
 function Empty({ onNew }: { onNew: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center m-fade-up">
-      <div className="w-20 h-20 rounded-3xl flex items-center justify-center mb-5"
-        style={{ background: "rgba(99,102,241,.1)", border: "1px solid rgba(99,102,241,.2)", boxShadow: "0 0 32px rgba(99,102,241,.12)" }}>
+    <div className="m-fade-up flex flex-col items-center justify-center py-16 text-center">
+      <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-3xl"
+        style={{ background: "rgba(99,102,241,.1)", border: "1px solid rgba(99,102,241,.25)", boxShadow: "0 0 32px rgba(99,102,241,.15)" }}>
         <Zap size={30} className="text-indigo-400" />
       </div>
-      <h3 className="text-lg font-bold text-white mb-2">Nenhuma meta criada</h3>
-      <p className="text-sm text-white/35 mb-7 max-w-[240px]">
+      <h3 className="font-display mb-2 text-lg font-bold text-foreground">Nenhuma meta criada</h3>
+      <p className="mb-7 max-w-[240px] text-sm text-muted-foreground">
         Defina seus objetivos e acompanhe seu progresso aqui.
       </p>
       <button onClick={onNew}
-        className="flex items-center gap-2 rounded-2xl px-6 py-3 text-sm font-bold text-white tap-scale"
+        className="tap-scale flex items-center gap-2 rounded-2xl px-6 py-3 text-sm font-bold text-white"
         style={{ background: "linear-gradient(135deg,#6366f1,#a855f7)", boxShadow: "0 8px 28px rgba(99,102,241,.4)" }}>
         <Sparkles size={13} /> Criar primeira meta
       </button>
@@ -835,24 +732,25 @@ function OwnerView() {
         {/* header */}
         <div className="m-fade-up flex items-center justify-between gap-3">
           <div>
-            <p className="text-[10px] font-semibold tracking-[.2em] uppercase text-indigo-400 mb-0.5">FinanceOS</p>
-            <h1 className="text-[22px] font-black text-white tracking-tight leading-tight">Metas Financeiras</h1>
+            <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[.2em] text-indigo-400">FinanceOS</p>
+            <h1 className="font-display text-[22px] font-black leading-tight tracking-tight text-foreground">Metas Financeiras</h1>
             {!isLoading && (
-              <p className="text-xs text-white/32 mt-0.5">
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 {ativas.length} ativa{ativas.length !== 1 ? "s" : ""}
                 {concluidas.length > 0 && ` · ${concluidas.length} conquista${concluidas.length !== 1 ? "s" : ""}`}
               </p>
             )}
           </div>
-          <button onClick={() => setNewOpen(true)}
-            className="flex items-center gap-1.5 rounded-2xl px-4 py-2.5 text-sm font-semibold text-white tap-scale shrink-0"
+          <button
+            onClick={() => setNewOpen(true)}
+            className="tap-scale flex shrink-0 items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold text-white"
             style={{
               background: "linear-gradient(135deg,rgba(99,102,241,.75),rgba(168,85,247,.75))",
               border: "1px solid rgba(99,102,241,.35)",
               boxShadow: "0 4px 18px rgba(99,102,241,.28)",
               backdropFilter: "blur(12px)",
             }}>
-            <Plus size={14} /> Nova Meta
+            <Plus size={14} /> <span className="hidden sm:inline">Nova Meta</span>
           </button>
         </div>
 
@@ -872,24 +770,19 @@ function OwnerView() {
 
             {concluidas.length > 0 && (
               <div className="space-y-2">
-                <p className="text-[10px] font-semibold tracking-[.18em] uppercase text-white/22 px-1">✦ Conquistas</p>
+                <p className="px-1 text-[10px] font-semibold uppercase tracking-[.18em] text-muted-foreground/60">✦ Conquistas</p>
                 {concluidas.map((m, i) => (
                   <button key={m.id} onClick={() => { setSel(m); setSelIdx(ativas.length + i) }}
-                    className="w-full flex items-center gap-3 rounded-2xl px-4 py-3 tap-scale m-fade-up"
-                    style={{
-                      background: "rgba(16,185,129,.07)",
-                      border: "1px solid rgba(16,185,129,.18)",
-                      animationDelay: `${(ativas.length + i) * 90}ms`,
-                    }}>
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-                      style={{ background: "rgba(16,185,129,.18)" }}>
+                    className="m-fade-up tap-scale flex w-full items-center gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3"
+                    style={{ animationDelay: `${(ativas.length + i) * 90}ms` }}>
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/15">
                       <Check size={13} className="text-emerald-400" />
                     </div>
-                    <div className="flex-1 text-left min-w-0">
-                      <p className="text-sm font-semibold text-white/65 truncate">{m.title}</p>
-                      <p className="text-xs text-emerald-400/65">{fmtBRL(Number(m.target_value))} · Concluída</p>
+                    <div className="min-w-0 flex-1 text-left">
+                      <p className="truncate text-sm font-semibold text-foreground/80">{m.title}</p>
+                      <p className="font-numeric text-xs text-emerald-500/80">{fmtBRL(Number(m.target_value))} · Concluída</p>
                     </div>
-                    <ChevronRight size={13} className="text-white/18 shrink-0" />
+                    <ChevronRight size={13} className="shrink-0 text-muted-foreground/40" />
                   </button>
                 ))}
               </div>
@@ -930,30 +823,29 @@ function GuestView() {
         {/* header */}
         <div className="m-fade-up flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-semibold tracking-[.2em] uppercase text-cyan-400 mb-0.5 flex items-center gap-1.5">
+            <p className="mb-0.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[.2em] text-cyan-400">
               <Share2 size={9} /> Nossas Metas
             </p>
-            <h1 className="text-[22px] font-black text-white tracking-tight leading-tight">Metas Financeiras</h1>
+            <h1 className="font-display text-[22px] font-black leading-tight tracking-tight text-foreground">Metas Financeiras</h1>
             {!isLoading && (
-              <p className="text-xs text-white/32 mt-0.5">
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 {goals.length} meta{goals.length !== 1 ? "s" : ""} compartilhada{goals.length !== 1 ? "s" : ""}
               </p>
             )}
           </div>
-          <div className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[11px] text-white/42 shrink-0 mt-1"
-            style={{ background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.08)" }}>
+          <div className="mt-1 flex shrink-0 items-center gap-1.5 rounded-xl border border-border/60 bg-muted/40 px-2.5 py-1.5 text-[11px] text-muted-foreground">
             <Eye size={11} /> Somente visualização
           </div>
         </div>
 
         {isLoading ? <Skeleton /> : goals.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center m-fade-up">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-              style={{ background: "rgba(34,211,238,.1)", border: "1px solid rgba(34,211,238,.2)" }}>
+          <div className="m-fade-up flex flex-col items-center justify-center py-16 text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl"
+              style={{ background: "rgba(34,211,238,.1)", border: "1px solid rgba(34,211,238,.25)" }}>
               <Share2 size={22} className="text-cyan-400" />
             </div>
-            <h3 className="text-base font-bold text-white mb-2">Nenhuma meta compartilhada</h3>
-            <p className="text-sm text-white/35 max-w-[240px]">O proprietário ainda não compartilhou nenhuma meta com você.</p>
+            <h3 className="font-display mb-2 text-base font-bold text-foreground">Nenhuma meta compartilhada</h3>
+            <p className="max-w-[240px] text-sm text-muted-foreground">O proprietário ainda não compartilhou nenhuma meta com você.</p>
           </div>
         ) : (
           <>
@@ -971,24 +863,19 @@ function GuestView() {
 
             {concluidas.length > 0 && (
               <div className="space-y-2">
-                <p className="text-[10px] font-semibold tracking-[.18em] uppercase text-white/22 px-1">✦ Concluídas</p>
+                <p className="px-1 text-[10px] font-semibold uppercase tracking-[.18em] text-muted-foreground/60">✦ Concluídas</p>
                 {concluidas.map((m, i) => (
                   <button key={m.id} onClick={() => { setSel(m); setSelIdx(ativas.length + i) }}
-                    className="w-full flex items-center gap-3 rounded-2xl px-4 py-3 tap-scale m-fade-up"
-                    style={{
-                      background: "rgba(16,185,129,.07)",
-                      border: "1px solid rgba(16,185,129,.18)",
-                      animationDelay: `${(ativas.length + i) * 90}ms`,
-                    }}>
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-                      style={{ background: "rgba(16,185,129,.18)" }}>
+                    className="m-fade-up tap-scale flex w-full items-center gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3"
+                    style={{ animationDelay: `${(ativas.length + i) * 90}ms` }}>
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/15">
                       <Check size={13} className="text-emerald-400" />
                     </div>
-                    <div className="flex-1 text-left min-w-0">
-                      <p className="text-sm font-semibold text-white/65 truncate">{m.title}</p>
-                      <p className="text-xs text-emerald-400/65">{fmtBRL(Number(m.target_value))} · Concluída</p>
+                    <div className="min-w-0 flex-1 text-left">
+                      <p className="truncate text-sm font-semibold text-foreground/80">{m.title}</p>
+                      <p className="font-numeric text-xs text-emerald-500/80">{fmtBRL(Number(m.target_value))} · Concluída</p>
                     </div>
-                    <ChevronRight size={13} className="text-white/18 shrink-0" />
+                    <ChevronRight size={13} className="shrink-0 text-muted-foreground/40" />
                   </button>
                 ))}
               </div>
@@ -1012,19 +899,13 @@ function MetasPage() {
     <>
       <style>{CSS}</style>
       {/*
-        Negative margin + min-h para cobrir todo o espaço do _layout main,
-        preservando o padding interno para o conteúdo.
-        O Aurora usa position:fixed com z-index:-1 para ficar atrás de tudo
-        sem interferir no layout box do _layout.
+        Sem fundo sólido próprio: a página agora fica transparente sobre o
+        AnimatedBackground global do _layout, e a Aurora local (reativa ao
+        mouse) entra como camada extra de atmosfera por cima dele.
       */}
-      <div className="-m-4 md:-m-8 min-h-[calc(100svh-4rem)]"
-        style={{ background: "#06060f" }}>
-        <div className="max-w-xl mx-auto px-4 pt-5 pb-28 md:px-8 md:pt-7 md:pb-10">
-          {isGuest ? <GuestView /> : <OwnerView />}
-        </div>
+      <div className="mx-auto max-w-xl space-y-0 pb-28 md:pb-10">
+        {isGuest ? <GuestView /> : <OwnerView />}
       </div>
     </>
   )
 }
-
-export default MetasPage

@@ -11,6 +11,8 @@ import { useGuestAccess, type GuestAccess, type GuestAccessCreate, type GuestAcc
 import { useGoals } from "@/hooks/api/useGoals"
 import { useInvestments } from "@/hooks/api/useInvestments"
 import useCustomToast from "@/hooks/useCustomToast"
+import { CineCard } from "@/components/Common/CineCard"
+import { PageHeader } from "@/components/Common/PageHeader"
 
 export const Route = createFileRoute("/_layout/convidados")({
   component: ConvidadosPage,
@@ -24,7 +26,7 @@ function fmtBRL(v: number) {
 
 const MODULE_OPTIONS = [
   { key: "metas",         label: "Metas",         icon: Target,     color: "#22d3ee" },
-  { key: "investimentos", label: "Investimentos",  icon: TrendingUp, color: "#a78bfa" },
+  { key: "investimentos", label: "Investimentos", icon: TrendingUp, color: "#a78bfa" },
 ]
 
 // ── Modal: Criar / Editar Convidado ───────────────────────────────────────────
@@ -103,18 +105,20 @@ function GuestModal({ editing, onClose }: GuestModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+    <div className="fixed inset-0 z-[60] flex items-end justify-center p-0 sm:items-center sm:p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative z-[61] w-full sm:max-w-lg max-h-[90svh] flex flex-col rounded-t-2xl sm:rounded-2xl border border-border bg-card shadow-2xl">
+      <div className="glass-card animate-fade-up relative z-[61] flex max-h-[90svh] w-full flex-col overflow-hidden rounded-t-2xl shadow-2xl sm:max-w-lg sm:rounded-2xl">
+        <div className="divider-glow shrink-0" />
+
         {/* Header */}
-        <div className="flex items-center justify-between shrink-0 px-5 py-4 border-b border-border">
+        <div className="flex shrink-0 items-center justify-between border-b border-border/50 px-5 py-4">
           <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
+            <div className="glow-primary flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
               <UserCheck size={16} />
             </div>
             <div>
-              <h2 className="text-sm font-semibold">
+              <h2 className="font-display text-sm font-semibold">
                 {editing ? "Editar Convidado" : "Novo Convidado"}
               </h2>
               <p className="text-xs text-muted-foreground">
@@ -122,17 +126,17 @@ function GuestModal({ editing, onClose }: GuestModalProps) {
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+          <button onClick={onClose} className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
             <X size={16} />
           </button>
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+        <div className="flex-1 space-y-5 overflow-y-auto px-5 py-4">
 
           {/* Credenciais */}
           <div className="space-y-3">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Credenciais</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Credenciais</p>
             <div className="space-y-2">
               <Input
                 placeholder="Nome de usuário (login)"
@@ -147,7 +151,7 @@ function GuestModal({ editing, onClose }: GuestModalProps) {
                   placeholder={editing ? "Nova senha (deixe em branco para manter)" : "Senha do convidado"}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="h-9 text-sm pr-9"
+                  className="h-9 pr-9 text-sm"
                 />
                 <button
                   type="button"
@@ -162,7 +166,7 @@ function GuestModal({ editing, onClose }: GuestModalProps) {
 
           {/* Módulos */}
           <div className="space-y-3">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Módulos permitidos</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Módulos permitidos</p>
             <div className="flex gap-2">
               {MODULE_OPTIONS.map(m => {
                 const Icon = m.icon
@@ -177,6 +181,7 @@ function GuestModal({ editing, onClose }: GuestModalProps) {
                         ? "border-primary/40 bg-primary/10 text-primary"
                         : "border-border text-muted-foreground hover:border-primary/20 hover:text-foreground"
                     )}
+                    style={active ? { boxShadow: "0 0 18px -6px var(--glow-primary)" } : undefined}
                   >
                     <Icon size={15} />
                     {m.label}
@@ -190,13 +195,13 @@ function GuestModal({ editing, onClose }: GuestModalProps) {
           {/* Metas compartilhadas */}
           {selectedModules.includes("metas") && (
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Metas visíveis ({selectedGoals.length} selecionada{selectedGoals.length !== 1 ? "s" : ""})
               </p>
               {ativas.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-4">Nenhuma meta ativa</p>
+                <p className="py-4 text-center text-xs text-muted-foreground">Nenhuma meta ativa</p>
               ) : (
-                <div className="rounded-xl border border-border bg-muted/20 divide-y divide-border overflow-hidden">
+                <div className="divide-y divide-border/50 overflow-hidden rounded-xl border border-border/60 bg-muted/20">
                   {ativas.map(g => {
                     const pct = g.target_value > 0
                       ? Math.round((Number(g.current_value) / Number(g.target_value)) * 100)
@@ -217,9 +222,9 @@ function GuestModal({ editing, onClose }: GuestModalProps) {
                         )}>
                           {sel && <Check size={11} className="text-primary-foreground" />}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{g.title}</p>
-                          <p className="text-xs text-muted-foreground">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{g.title}</p>
+                          <p className="font-numeric text-xs text-muted-foreground">
                             {fmtBRL(Number(g.current_value))} / {fmtBRL(Number(g.target_value))} · {pct}%
                           </p>
                         </div>
@@ -234,13 +239,13 @@ function GuestModal({ editing, onClose }: GuestModalProps) {
           {/* Investimentos compartilhados */}
           {selectedModules.includes("investimentos") && (
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Investimentos visíveis ({selectedInvs.length} selecionado{selectedInvs.length !== 1 ? "s" : ""})
               </p>
               {invAtivos.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-4">Nenhum investimento ativo</p>
+                <p className="py-4 text-center text-xs text-muted-foreground">Nenhum investimento ativo</p>
               ) : (
-                <div className="rounded-xl border border-border bg-muted/20 divide-y divide-border overflow-hidden">
+                <div className="divide-y divide-border/50 overflow-hidden rounded-xl border border-border/60 bg-muted/20">
                   {invAtivos.map(inv => {
                     const sel = selectedInvs.includes(inv.id)
                     return (
@@ -258,8 +263,8 @@ function GuestModal({ editing, onClose }: GuestModalProps) {
                         )}>
                           {sel && <Check size={11} className="text-primary-foreground" />}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-numeric truncate text-sm font-medium">
                             {inv.finalidade ? `[${inv.finalidade}] ` : ""}{fmtBRL(Number(inv.current_value ?? inv.invested_value))}
                           </p>
                           <p className="text-xs text-muted-foreground">
@@ -276,11 +281,11 @@ function GuestModal({ editing, onClose }: GuestModalProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex gap-2 shrink-0 px-5 py-4 border-t border-border">
+        <div className="flex shrink-0 gap-2 border-t border-border/50 px-5 py-4">
           <Button variant="outline" size="sm" onClick={onClose} className="flex-1">
             Cancelar
           </Button>
-          <Button size="sm" onClick={handleSave} disabled={isBusy} className="flex-1">
+          <Button size="sm" onClick={handleSave} disabled={isBusy} className="glow-primary flex-1 gap-1.5">
             {isBusy ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
             {editing ? "Salvar alterações" : "Criar convidado"}
           </Button>
@@ -307,18 +312,25 @@ function GuestCard({ access }: { access: GuestAccess }) {
     <>
       {editing && <GuestModal editing={access} onClose={() => setEditing(false)} />}
 
-      <div className={cn(
-        "rounded-xl border border-border bg-card p-4 space-y-3 transition-opacity",
-        !access.is_active && "opacity-60"
-      )}>
+      <CineCard
+        accent="#22d3ee"
+        interactive={access.is_active}
+        className={cn("space-y-3 p-4", !access.is_active && "opacity-60 saturate-50")}
+      >
         {/* Header do card */}
         <div className="flex items-start gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <div
+            className="flex size-10 shrink-0 items-center justify-center rounded-xl text-primary-foreground"
+            style={{
+              background: "linear-gradient(135deg, var(--finance-green), var(--finance-cyan))",
+              boxShadow: "0 0 16px -4px var(--glow-primary)",
+            }}
+          >
             <Users size={18} />
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold truncate">@{access.guest.name}</p>
+              <p className="truncate text-sm font-semibold">@{access.guest.name}</p>
               {!access.is_active && (
                 <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
                   Inativo
@@ -329,17 +341,17 @@ function GuestCard({ access }: { access: GuestAccess }) {
               Criado em {new Date(access.created_at).toLocaleDateString("pt-BR")}
             </p>
           </div>
-          <div className="flex gap-1 shrink-0">
+          <div className="flex shrink-0 gap-1">
             <button
               onClick={copyLogin}
               title="Copiar login"
-              className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               <Copy size={13} />
             </button>
             <button
               onClick={() => setEditing(true)}
-              className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               <Pencil size={13} />
             </button>
@@ -348,13 +360,13 @@ function GuestCard({ access }: { access: GuestAccess }) {
                 <button
                   onClick={() => { deleteGuest(access.id); setConfirming(false) }}
                   disabled={isDeleting}
-                  className="flex size-7 items-center justify-center rounded-md bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 transition-colors"
+                  className="flex size-7 items-center justify-center rounded-md bg-rose-500/10 text-rose-500 transition-colors hover:bg-rose-500/20"
                 >
                   <Check size={13} />
                 </button>
                 <button
                   onClick={() => setConfirming(false)}
-                  className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted transition-colors"
+                  className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted"
                 >
                   <X size={13} />
                 </button>
@@ -362,7 +374,7 @@ function GuestCard({ access }: { access: GuestAccess }) {
             ) : (
               <button
                 onClick={() => setConfirming(true)}
-                className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-rose-500/10 hover:text-rose-500"
               >
                 <Trash2 size={13} />
               </button>
@@ -380,7 +392,7 @@ function GuestCard({ access }: { access: GuestAccess }) {
               <span
                 key={m.key}
                 className="flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium"
-                style={{ backgroundColor: `${m.color}20`, color: m.color }}
+                style={{ backgroundColor: `${m.color}20`, color: m.color, boxShadow: `0 0 12px -6px ${m.color}` }}
               >
                 <Icon size={11} />
                 {m.label}
@@ -391,16 +403,16 @@ function GuestCard({ access }: { access: GuestAccess }) {
 
         {/* Resumo dos itens */}
         <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="rounded-lg bg-muted/40 px-3 py-2">
+          <div className="rounded-lg border border-border/40 bg-muted/40 px-3 py-2">
             <p className="text-muted-foreground">Metas</p>
-            <p className="font-semibold">{access.shared_goal_ids.length} compartilhada{access.shared_goal_ids.length !== 1 ? "s" : ""}</p>
+            <p className="font-numeric font-semibold">{access.shared_goal_ids.length} compartilhada{access.shared_goal_ids.length !== 1 ? "s" : ""}</p>
           </div>
-          <div className="rounded-lg bg-muted/40 px-3 py-2">
+          <div className="rounded-lg border border-border/40 bg-muted/40 px-3 py-2">
             <p className="text-muted-foreground">Investimentos</p>
-            <p className="font-semibold">{access.shared_investment_ids.length} compartilhado{access.shared_investment_ids.length !== 1 ? "s" : ""}</p>
+            <p className="font-numeric font-semibold">{access.shared_investment_ids.length} compartilhado{access.shared_investment_ids.length !== 1 ? "s" : ""}</p>
           </div>
         </div>
-      </div>
+      </CineCard>
     </>
   )
 }
@@ -414,10 +426,10 @@ function ConvidadosPage() {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="h-8 w-48 animate-pulse rounded bg-muted" />
+        <div className="skeleton h-8 w-48" />
         <div className="grid gap-3 sm:grid-cols-2">
           {[...Array(2)].map((_, i) => (
-            <div key={i} className="h-32 animate-pulse rounded-xl bg-muted" />
+            <div key={i} className="skeleton h-32 rounded-xl" />
           ))}
         </div>
       </div>
@@ -428,24 +440,25 @@ function ConvidadosPage() {
     <div className="space-y-4">
       {modalOpen && <GuestModal onClose={() => setModalOpen(false)} />}
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight sm:text-xl">Convidados</h1>
-          <p className="text-xs text-muted-foreground">
-            {guests.length} convidado{guests.length !== 1 ? "s" : ""} · acesso somente leitura
-          </p>
-        </div>
-        <Button size="sm" className="gap-1.5" onClick={() => setModalOpen(true)}>
-          <Plus size={14} /> Novo Convidado
-        </Button>
-      </div>
+      <PageHeader
+        eyebrow="Acesso compartilhado"
+        title="Convidados"
+        subtitle={`${guests.length} convidado${guests.length !== 1 ? "s" : ""} · acesso somente leitura`}
+        action={
+          <Button size="sm" className="glow-primary gap-1.5" onClick={() => setModalOpen(true)}>
+            <Plus size={14} /> Novo Convidado
+          </Button>
+        }
+      />
 
       {/* Aviso informativo */}
-      <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
-        <Shield size={16} className="text-primary shrink-0 mt-0.5" />
+      <div className="glass-card animate-fade-up delay-1 flex items-start gap-3 rounded-xl border-primary/20 p-4 opacity-0">
+        <div className="glow-primary mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/15">
+          <Shield size={14} className="text-primary" />
+        </div>
         <div>
           <p className="text-sm font-medium text-primary">Acesso seguro e controlado</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             Convidados só visualizam os dados que você liberar. Eles não podem criar, editar ou apagar nada.
           </p>
         </div>
@@ -453,18 +466,18 @@ function ConvidadosPage() {
 
       {/* Lista */}
       {guests.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border bg-muted/20 py-16 text-center">
-          <Users size={32} className="mx-auto text-muted-foreground/50 mb-3" />
+        <div className="glass-card animate-fade-up rounded-xl border border-dashed border-border py-16 text-center">
+          <Users size={32} className="mx-auto mb-3 text-muted-foreground/50" />
           <p className="text-sm font-medium text-muted-foreground">Nenhum convidado ainda</p>
-          <p className="text-xs text-muted-foreground/70 mt-1">
+          <p className="mt-1 text-xs text-muted-foreground/70">
             Crie um acesso para compartilhar metas e investimentos específicos
           </p>
-          <Button size="sm" className="mt-4 gap-1.5" onClick={() => setModalOpen(true)}>
+          <Button size="sm" className="glow-primary mt-4 gap-1.5" onClick={() => setModalOpen(true)}>
             <Plus size={14} /> Criar primeiro convidado
           </Button>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="stagger-children grid gap-3 sm:grid-cols-2">
           {guests.map(g => <GuestCard key={g.id} access={g} />)}
         </div>
       )}

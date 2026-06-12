@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { api, BASE } from "@/lib/api"
 import { useTransactionCategories } from "@/hooks/api/useCategorias"
+import { CineCard } from "@/components/Common/CineCard"
+import { CountUp } from "@/components/Common/CountUp"
+import { PageHeader } from "@/components/Common/PageHeader"
 
 export const Route = createFileRoute("/_layout/caixinhas")({
   component: CaixinhasPage,
@@ -38,8 +41,8 @@ const MONTH_NAMES = [
   "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
   "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro",
 ]
-const COLORS = ["#4ade80","#22d3ee","#a78bfa","#fbbf24","#f87171","#fb923c","#38bdf8","#f472b6","#34d399","#818cf8"]
-const fmtBRL = (v: number) => Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+const COLORS = ["#34d399","#22d3ee","#a78bfa","#fbbf24","#fb7185","#fb923c","#38bdf8","#f472b6","#4ade80","#818cf8"]
+const fmtBRL = (v: number) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 
 const reserveKeys = {
   all:     ["category_reserves"] as const,
@@ -73,6 +76,20 @@ function useDeleteReserve() {
     mutationFn: (id: number) => api.delete(`${BASE}/category_reserve/${id}`).then(r => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: reserveKeys.all }),
   })
+}
+
+// ── Bottom sheet em vidro (padrão da página) ──────────────────────────────────
+
+function GlassSheet({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
+  return (
+    <>
+      <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="glass-card animate-fade-up fixed inset-x-0 bottom-0 z-[61] flex max-h-[90svh] flex-col rounded-t-2xl border-t">
+        <div className="divider-glow shrink-0" />
+        {children}
+      </div>
+    </>
+  )
 }
 
 // ── Modal criar / editar ──────────────────────────────────────────────────────
@@ -109,49 +126,46 @@ function ReserveModal({ editing, month, year, onClose }: {
   }
 
   return (
-    <>
-      <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed inset-x-0 bottom-0 z-[61] flex flex-col rounded-t-2xl border-t border-border bg-card max-h-[90svh]">
-        <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-border">
-          <div>
-            <h2 className="text-sm font-semibold">{isEdit ? "Editar Caixinha" : "Nova Caixinha"}</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">{MONTH_NAMES[month - 1]} {year}</p>
-          </div>
-          <button onClick={onClose} className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted transition-colors">
-            <X size={15} />
-          </button>
+    <GlassSheet onClose={onClose}>
+      <div className="flex shrink-0 items-center justify-between border-b border-border/50 px-5 py-4">
+        <div>
+          <h2 className="font-display text-sm font-semibold">{isEdit ? "Editar Caixinha" : "Nova Caixinha"}</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">{MONTH_NAMES[month - 1]} {year}</p>
         </div>
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-          {!isEdit && (
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Categoria</label>
-              <select value={form.category_id} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))}
-                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                <option value="">Selecione...</option>
-                {categorias.map(c => <option key={c.id} value={c.id}>{c.description}</option>)}
-              </select>
-            </div>
-          )}
+        <button onClick={onClose} className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted">
+          <X size={15} />
+        </button>
+      </div>
+      <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+        {!isEdit && (
           <div className="space-y-1.5">
-            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Valor Reservado (R$)</label>
-            <Input placeholder="0,00" type="number" step="0.01" min="0"
-              value={form.reserved_value} onChange={e => setForm(f => ({ ...f, reserved_value: e.target.value }))}
-              className="h-10 text-sm" />
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Categoria</label>
+            <select value={form.category_id} onChange={e => setForm(f => ({ ...f, category_id: e.target.value }))}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+              <option value="">Selecione...</option>
+              {categorias.map(c => <option key={c.id} value={c.id}>{c.description}</option>)}
+            </select>
           </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Observação (opcional)</label>
-            <Input placeholder="Ex: reserva viagem..." value={form.note}
-              onChange={e => setForm(f => ({ ...f, note: e.target.value }))} className="h-10 text-sm" />
-          </div>
+        )}
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Valor Reservado (R$)</label>
+          <Input placeholder="0,00" type="number" step="0.01" min="0"
+            value={form.reserved_value} onChange={e => setForm(f => ({ ...f, reserved_value: e.target.value }))}
+            className="font-numeric h-10 text-sm" />
         </div>
-        <div className="shrink-0 flex gap-2 px-5 pb-5 pt-3 border-t border-border">
-          <Button variant="outline" className="flex-1 h-10" onClick={onClose}>Cancelar</Button>
-          <Button className="flex-1 h-10" disabled={!isValid || isPending} onClick={handleSubmit}>
-            {isPending ? <Loader2 size={14} className="animate-spin" /> : isEdit ? "Salvar" : "Criar caixinha"}
-          </Button>
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Observação (opcional)</label>
+          <Input placeholder="Ex: reserva viagem..." value={form.note}
+            onChange={e => setForm(f => ({ ...f, note: e.target.value }))} className="h-10 text-sm" />
         </div>
       </div>
-    </>
+      <div className="flex shrink-0 gap-2 border-t border-border/50 px-5 pb-5 pt-3">
+        <Button variant="outline" className="h-10 flex-1" onClick={onClose}>Cancelar</Button>
+        <Button className="glow-primary h-10 flex-1" disabled={!isValid || isPending} onClick={handleSubmit}>
+          {isPending ? <Loader2 size={14} className="animate-spin" /> : isEdit ? "Salvar" : "Criar caixinha"}
+        </Button>
+      </div>
+    </GlassSheet>
   )
 }
 
@@ -214,151 +228,148 @@ function CopiarCaixinhasModal({ fromMonth, fromYear, reserves, onClose }: {
   }
 
   return (
-    <>
-      <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed inset-x-0 bottom-0 z-[61] flex flex-col rounded-t-2xl border-t border-border bg-card max-h-[90svh]">
-        <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-border">
-          <h2 className="text-sm font-semibold">Copiar Caixinhas</h2>
-          <button onClick={onClose} className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted transition-colors">
-            <X size={15} />
-          </button>
-        </div>
+    <GlassSheet onClose={onClose}>
+      <div className="flex shrink-0 items-center justify-between border-b border-border/50 px-5 py-4">
+        <h2 className="font-display text-sm font-semibold">Copiar Caixinhas</h2>
+        <button onClick={onClose} className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted">
+          <X size={15} />
+        </button>
+      </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
-          {/* Origem → Destino */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1 rounded-xl border border-border bg-muted/30 p-3 text-center">
-              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1">De</p>
-              <p className="text-sm font-semibold">{MONTH_NAMES[fromMonth - 1]}</p>
-              <p className="text-xs text-muted-foreground">{fromYear}</p>
-            </div>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="text-muted-foreground shrink-0">
-              <path d="M4 10h12M12 6l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <div className="flex-1 rounded-xl border border-primary/40 bg-primary/5 p-3">
-              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide text-center mb-1">Para</p>
-              <div className="flex items-center justify-between gap-1">
-                <button onClick={() => navigateTo(-1)} disabled={!canNavigatePrev}
-                  className={cn("rounded p-0.5 transition-colors", canNavigatePrev
-                    ? "text-muted-foreground hover:text-foreground"
-                    : "text-muted-foreground/20 cursor-not-allowed")}>
-                  <ChevronLeft size={14} />
-                </button>
-                <div className="text-center">
-                  <p className="text-sm font-semibold">{MONTH_NAMES[toMonth - 1]}</p>
-                  <p className="text-xs text-muted-foreground">{toYear}</p>
-                </div>
-                <button onClick={() => navigateTo(1)} className="rounded p-0.5 text-muted-foreground hover:text-foreground transition-colors">
-                  <ChevronRight size={14} />
-                </button>
+      <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5">
+        {/* Origem → Destino */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1 rounded-xl border border-border bg-muted/30 p-3 text-center">
+            <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">De</p>
+            <p className="font-display text-sm font-semibold">{MONTH_NAMES[fromMonth - 1]}</p>
+            <p className="text-xs text-muted-foreground">{fromYear}</p>
+          </div>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="shrink-0 text-primary">
+            <path d="M4 10h12M12 6l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <div className="flex-1 rounded-xl border border-primary/40 bg-primary/5 p-3 glow-primary">
+            <p className="mb-1 text-center text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Para</p>
+            <div className="flex items-center justify-between gap-1">
+              <button onClick={() => navigateTo(-1)} disabled={!canNavigatePrev}
+                className={cn("rounded p-0.5 transition-colors", canNavigatePrev
+                  ? "text-muted-foreground hover:text-foreground"
+                  : "cursor-not-allowed text-muted-foreground/20")}>
+                <ChevronLeft size={14} />
+              </button>
+              <div className="text-center">
+                <p className="font-display text-sm font-semibold">{MONTH_NAMES[toMonth - 1]}</p>
+                <p className="text-xs text-muted-foreground">{toYear}</p>
               </div>
+              <button onClick={() => navigateTo(1)} className="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground">
+                <ChevronRight size={14} />
+              </button>
             </div>
           </div>
+        </div>
 
-          {/* Opção de valor */}
-          {!result && (
-            <div className="rounded-xl border border-border overflow-hidden">
-              {[
-                { value: true,  label: "Saldo real (recomendado)", desc: "Copia o disponível após gastos e parcelas" },
-                { value: false, label: "Valor original reservado",  desc: "Copia o valor sem considerar o que foi gasto" },
-              ].map(opt => (
-                <button key={String(opt.value)} onClick={() => setUseAvailable(opt.value)}
-                  className={cn("flex items-center gap-3 w-full px-4 py-3 text-left transition-colors border-b border-border last:border-0",
-                    useAvailable === opt.value ? "bg-primary/5" : "hover:bg-muted/40")}>
-                  <div className={cn("size-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors",
-                    useAvailable === opt.value ? "border-primary" : "border-muted-foreground/40")}>
-                    {useAvailable === opt.value && <div className="size-2 rounded-full bg-primary" />}
+        {/* Opção de valor */}
+        {!result && (
+          <div className="overflow-hidden rounded-xl border border-border">
+            {[
+              { value: true,  label: "Saldo real (recomendado)", desc: "Copia o disponível após gastos e parcelas" },
+              { value: false, label: "Valor original reservado",  desc: "Copia o valor sem considerar o que foi gasto" },
+            ].map(opt => (
+              <button key={String(opt.value)} onClick={() => setUseAvailable(opt.value)}
+                className={cn("flex w-full items-center gap-3 border-b border-border px-4 py-3 text-left transition-colors last:border-0",
+                  useAvailable === opt.value ? "bg-primary/5" : "hover:bg-muted/40")}>
+                <div className={cn("flex size-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+                  useAvailable === opt.value ? "border-primary" : "border-muted-foreground/40")}>
+                  {useAvailable === opt.value && <div className="size-2 rounded-full bg-primary" />}
+                </div>
+                <div>
+                  <p className="text-xs font-medium">{opt.label}</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">{opt.desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Preview */}
+        {!result && toCreate.length > 0 && (
+          <div className="space-y-2 rounded-xl border border-border bg-muted/20 p-3">
+            <p className="text-xs font-medium text-muted-foreground">
+              {toCreate.length} caixinha{toCreate.length > 1 ? "s" : ""} serão criadas:
+            </p>
+            <div className="max-h-44 space-y-1.5 overflow-y-auto">
+              {toCreate.map((item, i) => (
+                <div key={item.id} className="flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <div className="size-2 shrink-0 rounded-full" style={{ background: COLORS[i % COLORS.length], boxShadow: `0 0 5px ${COLORS[i % COLORS.length]}` }} />
+                    <span className="truncate text-xs">{item.category_name}</span>
                   </div>
-                  <div>
-                    <p className="text-xs font-medium">{opt.label}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">{opt.desc}</p>
+                  <div className="shrink-0 text-right">
+                    <span className="font-numeric text-xs font-medium text-emerald-400">{fmtBRL(item.valueToUse)}</span>
+                    {useAvailable && item.valueToUse !== item.reserved_value && (
+                      <span className="font-numeric ml-1 text-[10px] text-muted-foreground line-through">{fmtBRL(item.reserved_value)}</span>
+                    )}
                   </div>
-                </button>
+                </div>
               ))}
             </div>
-          )}
-
-          {/* Preview */}
-          {!result && toCreate.length > 0 && (
-            <div className="rounded-xl border border-border bg-muted/20 p-3 space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">
-                {toCreate.length} caixinha{toCreate.length > 1 ? "s" : ""} serão criadas:
+            {toSkip.length > 0 && (
+              <p className="border-t border-border pt-1 text-[11px] text-muted-foreground">
+                {toSkip.length} pulada{toSkip.length > 1 ? "s" : ""} (já existem no destino ou saldo zero)
               </p>
-              <div className="space-y-1.5 max-h-44 overflow-y-auto">
-                {toCreate.map((item, i) => (
-                  <div key={item.id} className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="size-2 rounded-full shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
-                      <span className="text-xs truncate">{item.category_name}</span>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <span className="text-xs font-medium text-emerald-400">{fmtBRL(item.valueToUse)}</span>
-                      {useAvailable && item.valueToUse !== item.reserved_value && (
-                        <span className="text-[10px] text-muted-foreground ml-1 line-through">{fmtBRL(item.reserved_value)}</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {toSkip.length > 0 && (
-                <p className="text-[11px] text-muted-foreground pt-1 border-t border-border">
-                  {toSkip.length} pulada{toSkip.length > 1 ? "s" : ""} (já existem no destino ou saldo zero)
-                </p>
-              )}
-            </div>
-          )}
+            )}
+          </div>
+        )}
 
-          {!result && toCreate.length === 0 && reserves.length > 0 && (
-            <div className="rounded-xl border border-border bg-muted/20 p-4 text-center">
-              <p className="text-xs text-muted-foreground">
-                Todas as caixinhas já existem em {MONTH_NAMES[toMonth - 1]} ou têm saldo zero.
-              </p>
-            </div>
-          )}
+        {!result && toCreate.length === 0 && reserves.length > 0 && (
+          <div className="rounded-xl border border-border bg-muted/20 p-4 text-center">
+            <p className="text-xs text-muted-foreground">
+              Todas as caixinhas já existem em {MONTH_NAMES[toMonth - 1]} ou têm saldo zero.
+            </p>
+          </div>
+        )}
 
-          {/* Resultado */}
-          {result && (
-            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-3">
-              <div className="flex items-center gap-2 text-emerald-400">
-                <CheckCircle2 size={16} />
-                <p className="text-sm font-semibold">Caixinhas copiadas!</p>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-center">
-                {[
-                  { label: "Criadas", value: result.created, color: "text-emerald-400" },
-                  { label: "Puladas", value: result.skipped, color: "text-muted-foreground" },
-                ].map(({ label, value, color }) => (
-                  <div key={label} className="rounded-lg bg-card border border-border py-2">
-                    <p className={cn("text-lg font-bold", color)}>{value}</p>
-                    <p className="text-[10px] text-muted-foreground">{label}</p>
-                  </div>
-                ))}
-              </div>
+        {/* Resultado */}
+        {result && (
+          <div className="animate-scale-in space-y-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
+            <div className="flex items-center gap-2 text-emerald-400">
+              <CheckCircle2 size={16} />
+              <p className="text-sm font-semibold">Caixinhas copiadas!</p>
             </div>
-          )}
-
-          {error && (
-            <div className="flex items-start gap-2 rounded-xl border border-rose-500/30 bg-rose-500/5 p-3">
-              <AlertCircle size={15} className="text-rose-400 shrink-0 mt-0.5" />
-              <p className="text-xs text-rose-400">{error}</p>
+            <div className="grid grid-cols-2 gap-2 text-center">
+              {[
+                { label: "Criadas", value: result.created, color: "text-emerald-400" },
+                { label: "Puladas", value: result.skipped, color: "text-muted-foreground" },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="rounded-lg border border-border bg-card py-2">
+                  <p className={cn("font-numeric text-lg font-bold", color)}>{value}</p>
+                  <p className="text-[10px] text-muted-foreground">{label}</p>
+                </div>
+              ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
-        <div className="shrink-0 flex gap-2 px-5 pb-5 pt-3 border-t border-border">
-          <Button variant="outline" className="flex-1 h-10" onClick={onClose}>
-            {result ? "Fechar" : "Cancelar"}
-          </Button>
-          {!result && (
-            <Button className="flex-1 h-10 gap-1.5" onClick={handleCopy}
-              disabled={toCreate.length === 0 || createMut.isPending}>
-              {createMut.isPending ? <Loader2 size={14} className="animate-spin" /> : <Copy size={14} />}
-              Copiar {toCreate.length > 0 ? `(${toCreate.length})` : ""}
-            </Button>
-          )}
-        </div>
+        {error && (
+          <div className="flex items-start gap-2 rounded-xl border border-rose-500/30 bg-rose-500/5 p-3">
+            <AlertCircle size={15} className="mt-0.5 shrink-0 text-rose-400" />
+            <p className="text-xs text-rose-400">{error}</p>
+          </div>
+        )}
       </div>
-    </>
+
+      <div className="flex shrink-0 gap-2 border-t border-border/50 px-5 pb-5 pt-3">
+        <Button variant="outline" className="h-10 flex-1" onClick={onClose}>
+          {result ? "Fechar" : "Cancelar"}
+        </Button>
+        {!result && (
+          <Button className="glow-primary h-10 flex-1 gap-1.5" onClick={handleCopy}
+            disabled={toCreate.length === 0 || createMut.isPending}>
+            {createMut.isPending ? <Loader2 size={14} className="animate-spin" /> : <Copy size={14} />}
+            Copiar {toCreate.length > 0 ? `(${toCreate.length})` : ""}
+          </Button>
+        )}
+      </div>
+    </GlassSheet>
   )
 }
 
@@ -376,14 +387,14 @@ function ReserveCard({ reserve, color, onEdit, onDelete }: {
   const committedPct = Math.min(reserve.committed_percentage, Math.max(0, 100 - spentPct))
 
   return (
-    <div className={cn("relative overflow-hidden rounded-xl border bg-card p-4 shadow-sm",
-      isOver ? "border-rose-500/30" : "border-border")}>
-      <div className="absolute inset-x-0 top-0 h-0.5 rounded-t-xl" style={{ background: color }} />
-
+    <CineCard
+      accent={isOver ? "#fb7185" : color}
+      className={cn("p-4", isOver && "border-rose-500/30")}
+    >
       <div className="mb-3 flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex min-w-0 items-center gap-2.5">
           <div className="flex size-8 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold"
-            style={{ background: `${color}20`, color }}>
+            style={{ background: `${color}20`, color, boxShadow: `0 0 12px -4px ${color}` }}>
             {reserve.category_acronym}
           </div>
           <div className="min-w-0">
@@ -392,10 +403,10 @@ function ReserveCard({ reserve, color, onEdit, onDelete }: {
           </div>
         </div>
         <div className="flex shrink-0 gap-1">
-          <button onClick={onEdit} className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+          <button onClick={onEdit} className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
             <Pencil size={12} />
           </button>
-          <button onClick={onDelete} className="rounded-md p-1.5 text-muted-foreground hover:bg-rose-500/10 hover:text-rose-500 transition-colors">
+          <button onClick={onDelete} className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-rose-500/10 hover:text-rose-500">
             <Trash2 size={12} />
           </button>
         </div>
@@ -404,25 +415,29 @@ function ReserveCard({ reserve, color, onEdit, onDelete }: {
       <div className="mb-3 flex items-end justify-between">
         <div>
           <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Reservado</p>
-          <p className="text-lg font-semibold leading-tight">{fmtBRL(reserved)}</p>
+          <p className="font-numeric text-lg font-semibold leading-tight">{fmtBRL(reserved)}</p>
         </div>
         <div className="text-right">
           <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Disponível</p>
-          <p className={cn("text-base font-semibold leading-tight", isOver ? "text-rose-500" : "text-emerald-500")}>
+          <p className={cn("font-numeric text-base font-semibold leading-tight", isOver ? "text-rose-500" : "text-emerald-500")}>
             {fmtBRL(available)}
           </p>
         </div>
       </div>
 
       {/* Barra dupla gasto + parcelas */}
-      <div className="space-y-1.5 mb-3">
-        <div className="h-2 rounded-full bg-muted overflow-hidden flex">
-          <div className="h-full rounded-l-full transition-all"
-            style={{ width: `${spentPct}%`, backgroundColor: isOver ? "#f87171" : color }} />
+      <div className="mb-3 space-y-1.5">
+        <div className="flex h-2 overflow-hidden rounded-full bg-muted">
+          <div className="h-full rounded-l-full transition-all duration-700"
+            style={{
+              width: `${spentPct}%`,
+              background: isOver ? "#fb7185" : `linear-gradient(90deg, ${color}90, ${color})`,
+              boxShadow: `0 0 8px ${isOver ? "#fb7185" : color}`,
+            }} />
           {committedPct > 0 && (
-            <div className="h-full transition-all" style={{
+            <div className="h-full transition-all duration-700" style={{
               width: `${committedPct}%`,
-              backgroundColor: isOver ? "#fca5a5" : `${color}70`,
+              backgroundColor: isOver ? "#fda4af" : `${color}70`,
               backgroundImage: `repeating-linear-gradient(45deg,transparent,transparent 2px,rgba(0,0,0,0.15) 2px,rgba(0,0,0,0.15) 4px)`,
             }} />
           )}
@@ -430,19 +445,19 @@ function ReserveCard({ reserve, color, onEdit, onDelete }: {
         <div className="space-y-0.5">
           <div className="flex justify-between text-[11px]">
             <span className="text-muted-foreground">Gasto real</span>
-            <span className="font-medium">{fmtBRL(spent)} ({spentPct.toFixed(0)}%)</span>
+            <span className="font-numeric font-medium">{fmtBRL(spent)} ({spentPct.toFixed(0)}%)</span>
           </div>
           {committed > 0 && (
             <div className="flex justify-between text-[11px]">
               <span className="text-muted-foreground">Parcelas</span>
-              <span className="font-medium text-amber-500">{fmtBRL(committed)}</span>
+              <span className="font-numeric font-medium text-amber-500">{fmtBRL(committed)}</span>
             </div>
           )}
         </div>
       </div>
 
       {isOver && <p className="text-[11px] font-medium text-rose-500">⚠ Reserva insuficiente</p>}
-    </div>
+    </CineCard>
   )
 }
 
@@ -471,65 +486,68 @@ function CaixinhasPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold tracking-tight sm:text-xl">Caixinhas</h1>
-          <p className="text-xs text-muted-foreground">
-            {isLoading ? "Carregando..." : `${reserves.length} caixinha${reserves.length !== 1 ? "s" : ""}`}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {reserves.length > 0 && (
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setCopyModal(true)}>
-              <Copy size={14} />
-              <span className="hidden sm:inline">Copiar para...</span>
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
+      <PageHeader
+        eyebrow="Envelopes do mês"
+        title="Caixinhas"
+        subtitle={isLoading ? "Carregando..." : `${reserves.length} caixinha${reserves.length !== 1 ? "s" : ""}`}
+        action={
+          <div className="flex gap-2">
+            {reserves.length > 0 && (
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setCopyModal(true)}>
+                <Copy size={14} />
+                <span className="hidden sm:inline">Copiar para...</span>
+              </Button>
+            )}
+            <Button size="sm" className="glow-primary gap-1.5" onClick={() => { setEditing(undefined); setModal(true) }}>
+              <Plus size={14} /> Nova
             </Button>
-          )}
-          <Button size="sm" className="gap-1.5" onClick={() => { setEditing(undefined); setModal(true) }}>
-            <Plus size={14} /> Nova
-          </Button>
-        </div>
-      </div>
+          </div>
+        }
+      />
 
-      {/* Navegação de mês */}
-      <div className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-2.5">
-        <button onClick={() => navigateMonth(-1)} className="rounded-lg p-1.5 hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+      {/* ── Navegação de mês ────────────────────────────────────────────────── */}
+      <div className="glass-card animate-fade-up delay-1 flex items-center justify-between rounded-xl px-4 py-2.5 opacity-0">
+        <button onClick={() => navigateMonth(-1)} className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
           <ChevronLeft size={16} />
         </button>
-        <p className="text-sm font-semibold">{MONTH_NAMES[month - 1]} {year}</p>
-        <button onClick={() => navigateMonth(1)} className="rounded-lg p-1.5 hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+        <p className="font-display text-sm font-semibold">{MONTH_NAMES[month - 1]} {year}</p>
+        <button onClick={() => navigateMonth(1)} className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
           <ChevronRight size={16} />
         </button>
       </div>
 
-      {/* KPIs 2x2 com parcelas */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+      {/* ── KPIs com parcelas ───────────────────────────────────────────────── */}
+      <div className="stagger-children grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
         {[
-          { label: "Reservado",  value: fmtBRL(summary?.total_reserved  ?? 0), accent: "#a78bfa" },
-          { label: "Gasto",      value: fmtBRL(summary?.total_spent     ?? 0), accent: "#f87171" },
-          { label: "Parcelas",   value: fmtBRL(summary?.total_committed ?? 0), accent: "#fbbf24" },
-          { label: "Disponível", value: fmtBRL(summary?.total_available ?? 0), accent: freeIsNeg ? "#f87171" : "#4ade80" },
+          { label: "Reservado",  value: summary?.total_reserved  ?? 0, accent: "#a78bfa" },
+          { label: "Gasto",      value: summary?.total_spent     ?? 0, accent: "#fb7185" },
+          { label: "Parcelas",   value: summary?.total_committed ?? 0, accent: "#fbbf24" },
+          { label: "Disponível", value: summary?.total_available ?? 0, accent: freeIsNeg ? "#fb7185" : "#34d399" },
         ].map(({ label, value, accent }) => (
-          <div key={label} className="rounded-xl border border-border bg-card p-3">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</p>
-            <p className="mt-1 text-sm font-bold sm:text-base" style={{ color: accent }}>{value}</p>
-          </div>
+          <CineCard key={label} accent={accent} className="p-3">
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+            <p className="font-numeric mt-1 text-sm font-bold sm:text-base" style={{ color: accent }}>
+              {isLoading ? "—" : <CountUp value={Number(value)} format={fmtBRL} />}
+            </p>
+          </CineCard>
         ))}
       </div>
 
+      {/* ── Conteúdo ────────────────────────────────────────────────────────── */}
       {isLoading ? (
         <div className="grid gap-3 sm:grid-cols-2">
-          {[1,2,3].map(i => <div key={i} className="h-44 rounded-xl bg-muted animate-pulse" />)}
+          {[1,2,3].map(i => <div key={i} className="skeleton h-44 rounded-xl" />)}
         </div>
       ) : reserves.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border bg-card py-20 text-center">
+        <div className="glass-card animate-fade-up rounded-xl border border-dashed border-border py-20 text-center">
           <PackageOpen size={32} className="mx-auto mb-3 text-muted-foreground/30" />
           <p className="text-sm font-medium">Nenhuma caixinha em {MONTH_NAMES[month - 1]}</p>
           <p className="mt-1 text-xs text-muted-foreground">Clique em "Nova" para separar o seu dinheiro por categoria</p>
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="stagger-children grid gap-3 sm:grid-cols-2">
             {reserves.map((r, i) => (
               <ReserveCard key={r.id} reserve={r} color={COLORS[i % COLORS.length]}
                 onEdit={() => { setEditing(r); setModal(true) }}
@@ -539,8 +557,8 @@ function CaixinhasPage() {
           </div>
 
           {pieData.length > 0 && (
-            <div className="rounded-xl border border-border bg-card p-4">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Distribuição</p>
+            <CineCard accent="#a78bfa" className="animate-fade-up p-4">
+              <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">Distribuição</p>
               <div className="flex items-center gap-4">
                 <div className="h-28 w-28 shrink-0">
                   <ResponsiveContainer width="100%" height="100%">
@@ -548,18 +566,25 @@ function CaixinhasPage() {
                       <Pie data={pieData} dataKey="value" cx="50%" cy="50%" innerRadius={28} outerRadius={48} strokeWidth={0}>
                         {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                       </Pie>
-                      <Tooltip formatter={(v: any) => fmtBRL(Number(v ?? 0))} />
+                      <Tooltip
+                        formatter={(v: any) => fmtBRL(Number(v ?? 0))}
+                        contentStyle={{
+                          background: "var(--popover)", border: "1px solid var(--border)",
+                          borderRadius: 12, fontSize: 12, color: "var(--popover-foreground)",
+                        }}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="flex flex-col gap-1.5 min-w-0 flex-1">
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                   {reserves.map((r, i) => {
                     const total = summary?.total_reserved ?? 0
                     return (
                       <div key={r.id} className="flex items-center gap-2">
-                        <div className="size-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                        <span className="text-xs text-muted-foreground truncate flex-1">{r.category_name}</span>
-                        <span className="text-xs font-medium shrink-0">
+                        <div className="size-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: COLORS[i % COLORS.length], boxShadow: `0 0 5px ${COLORS[i % COLORS.length]}` }} />
+                        <span className="flex-1 truncate text-xs text-muted-foreground">{r.category_name}</span>
+                        <span className="font-numeric shrink-0 text-xs font-medium">
                           {total > 0 ? Math.round((r.reserved_value / total) * 100) : 0}%
                         </span>
                       </div>
@@ -567,7 +592,7 @@ function CaixinhasPage() {
                   })}
                 </div>
               </div>
-            </div>
+            </CineCard>
           )}
         </div>
       )}
