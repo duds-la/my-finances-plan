@@ -16,16 +16,33 @@ const MONTH_NAMES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
 
 function useTotalReservado() {
   const now = new Date()
-  const month = now.getMonth() + 1
-  const year  = now.getFullYear()
+
+  // Próximo mês (com virada de ano)
+  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  const nextMonth = next.getMonth() + 1
+  const nextYear  = next.getFullYear()
+
+  // Mês atual (fallback)
+  const curMonth = now.getMonth() + 1
+  const curYear  = now.getFullYear()
 
   return useQuery<number>({
-    queryKey: ["category_reserves", "summary", month, year, "total"],
+    queryKey: ["category_reserves", "patrimonio", nextMonth, nextYear],
     queryFn: async () => {
-      const { data } = await api.get(
-        `${BASE}/category_reserve/summary?month=${month}&year=${year}`
+      const { data: nextData } = await api.get(
+        `${BASE}/category_reserve/summary?month=${nextMonth}&year=${nextYear}`
       )
-      return data.total_reserved ?? 0
+
+      // Próximo mês tem caixinhas → usa o reservado bruto dele
+      if (Array.isArray(nextData.reserves) && nextData.reserves.length > 0) {
+        return nextData.total_reserved ?? 0
+      }
+
+      // Fallback: mês atual
+      const { data: curData } = await api.get(
+        `${BASE}/category_reserve/summary?month=${curMonth}&year=${curYear}`
+      )
+      return curData.total_reserved ?? 0
     },
   })
 }
