@@ -19,6 +19,8 @@ from app.schemas.category_reserve_schema import (
 )
 from app.repositories.category_reserve_repository import Category_Reserve_Repository
 from app.utils.installment_utils import get_committed_by_category
+from app.schemas.category_reserve_schema import Category_Reserve_Copy_Request, Category_Reserve_Copy_Response
+
 
 router = APIRouter(prefix="/category_reserve", tags=["category_reserve"])
 repository = Category_Reserve_Repository()
@@ -183,3 +185,36 @@ def delete(
     if not obj:
         raise HTTPException(status_code=404, detail=f"Category Reserve with id {id} not found")
     repository.delete(db, obj)
+
+@router.post("/copy", response_model=Category_Reserve_Copy_Response, status_code=200)
+def copy_reserves(
+    data: Category_Reserve_Copy_Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if data.from_month == data.to_month and data.from_year == data.to_year:
+        raise HTTPException(status_code=400, detail="Mês de origem e destino são iguais.")
+
+    sources = repository.get_by_month_year(db, current_user.id, data.from_month, data.from_year)
+    if not sources:
+        raise HTTPException(status_code=404, detail=f"Nenhuma caixinha em {data.from_month}/{data.from_year}.")
+
+    dest = repository.get_by_month_year(db, current_user.id, data.to_month, data.to_year)
+    dest_cat_ids = {r.category_id for r in dest}
+
+    created = skipped = 0
+    for src in sources:
+        if src.category_id in dest_cat_ids:
+            skipped += 1
+        else:
+            repository.create(db, {
+                "user_id":        current_user.id,
+                "category_id":    src.category_id,
+                "month":          data.to_month,
+                "year":           data.to_year,
+                "reserved_value": src.reserved_value,
+                "note":           src.note,
+            })
+            created += 1
+
+    return Category_Reserve_Copy_Response(created=created, skipped=skipped)

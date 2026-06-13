@@ -77,6 +77,14 @@ function useDeleteReserve() {
     onSuccess: () => qc.invalidateQueries({ queryKey: reserveKeys.all }),
   })
 }
+function useCopyReserves() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { from_month: number; from_year: number; to_month: number; to_year: number }) =>
+      api.post(`${BASE}/category_reserve/copy`, data).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: reserveKeys.all }),
+  })
+}
 
 // ── Bottom sheet em vidro (padrão da página) ──────────────────────────────────
 

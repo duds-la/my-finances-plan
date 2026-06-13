@@ -54,3 +54,13 @@ class Reserve_Summary_Schema(BaseModel):
     total_available: float
     free_balance:    float
     reserves:        list[Category_Reserve_Schema_Enriched]
+
+class Category_Reserve_Copy_Request(BaseModel):
+    from_month: int
+    from_year:  int
+    to_month:   int
+    to_year:    int
+
+class Category_Reserve_Copy_Response(BaseModel):
+    created: int
+    skipped: int
